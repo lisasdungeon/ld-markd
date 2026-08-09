@@ -1,8 +1,8 @@
 # Changelog
 
-## 1.0.0 (unreleased, pending Odinn's sign-off)
+## 1.0.0 — 2026-08-09
 
-Initial build.
+Initial packaged build. Not yet signed off by Odinn as feature-complete.
 
 - Hover/target panel showing NPC/monster conditions (icon, description,
   remaining duration, applied-by when resolvable) for any player who can
