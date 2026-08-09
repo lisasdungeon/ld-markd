@@ -1,7 +1,7 @@
 {
   "name": "ld-markd",
-  "version": "1.1.0",
-  "description": "Lets players see the conditions/effects applied to NPCs and monsters on hover or target, with a GM scene control toggle.",
+  "version": "1.2.0",
+  "description": "Lets players see the conditions/effects applied to NPCs and monsters on hover or target, plus a GM Hub for viewing and editing NPC conditions.",
   "type": "module",
   "main": "scripts/main.js",
   "scripts": {
@@ -36,6 +36,9 @@
   "jest": {
     "testEnvironment": "jsdom",
     "transform": {},
+    "setupFiles": [
+      "<rootDir>/__tests__/helpers/jest.setup.js"
+    ],
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/__tests__/helpers/"

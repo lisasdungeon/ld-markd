@@ -2,8 +2,8 @@
 
 A Lisa's Dungeon module for Foundry VTT (v13/v14, system-agnostic) that lets
 **players** see the conditions/effects currently active on NPC and monster
-tokens — icon, description, and remaining duration — without needing
-ownership of the token.
+tokens, and gives the **GM** a dedicated Hub for viewing and editing every
+NPC's conditions on the current scene.
 
 ## Features
 
@@ -17,12 +17,18 @@ ownership of the token.
   tokens stacks their panels in that same corner.
 - Visible to any player who can currently see the token (normal vision/fog
   rules still apply — hidden tokens are unaffected).
-- **GM scene control toggle**: a control group in the scene controls toolbar
-  lets the GM flip the whole feature on/off instantly, mid-session, for
-  every connected player.
+- **GM Hub**: a window listing every NPC/monster token on the *current
+  scene only* as a card (portrait + name). Click a card to expand it and
+  see its conditions, add a new one from the system's own status list,
+  remove one, or edit one (opens the system's native effect sheet). Player
+  characters are never listed. The Hub refreshes itself live as tokens or
+  conditions change.
+- **GM scene controls**: a toolbar group with a toggle (flip player
+  visibility on/off instantly, mid-session, with a confirmation
+  notification) and a button that opens the GM Hub.
 - **Settings page toggle**: a world setting ("Show Scene Control Button")
-  lets the GM hide that toolbar button entirely if they don't want it
-  cluttering the toolbar.
+  lets the GM hide those toolbar controls entirely if they don't want them
+  cluttering the toolbar. It does not disable the underlying feature.
 
 ## Installation
 
@@ -41,11 +47,15 @@ Node tooling below if you're changing the source.
 
 ## Usage
 
-- **GM**: open the scene controls toolbar and click the "Toggle Condition
-  Watch" control (medical-notes icon) to enable/disable the feature for
-  everyone.
-- **GM**: to hide that button from the toolbar without disabling the
-  feature itself, go to **Game Settings → Configure Settings → Module
+- **GM**: open the scene controls toolbar. The medical-notes icon toggles
+  player visibility on/off (you'll get a confirmation notification either
+  way). The address-card icon opens the **GM Hub**.
+- **GM (Hub)**: click an NPC's card to expand it. Pick a status from the
+  dropdown and click "Add" to apply it (statuses already active are
+  disabled in the list); click the pencil to open that condition's own
+  effect sheet, or the × to remove it outright.
+- **GM**: to hide the toolbar controls without disabling the underlying
+  feature, go to **Game Settings → Configure Settings → Module
   Settings → LD Markd** and turn off "Show Scene Control Button".
 - **Players**: hover over any visible NPC/monster token to see its
   conditions; right-click-target a token to keep the panel pinned while you
@@ -69,6 +79,16 @@ custom item type) rather than as Active Effects, this module won't see
 those — most modern systems represent status conditions as Active Effects
 under the hood, but it's worth a quick check in unfamiliar systems.
 
+The GM Hub's "add condition" list and "edit condition" sheet both delegate
+to core Foundry APIs (`Actor#toggleStatusEffect` against
+`CONFIG.statusEffects`, and the effect's own `.sheet`) rather than a custom
+editor, so both are automatically correct for whatever system is active —
+no LD Markd-specific condition data to maintain.
+
+"NPC/monster" is determined generically as well: any token on the scene
+whose actor has no player owner (`actor.hasPlayerOwner === false`). This
+is a system-agnostic proxy for "not a PC," not a literal actor-type check.
+
 ## Development
 
 ```sh
@@ -89,10 +109,15 @@ after any change to `scripts/`.
 - `module.json` — manifest
 - `scripts/main.js` — entry point
 - `scripts/settings.js` — world settings
-- `scripts/controls.js` — scene control toolbar group
-- `scripts/watcher.js` — hover/target panel rendering and positioning
-- `styles/module.css` — panel styling
+- `scripts/controls.js` — scene control toolbar group (toggle + open-hub button)
+- `scripts/watcher.js` — player-facing hover/target panel rendering and positioning
+- `scripts/gm-hub.js` — GM Hub window (ApplicationV2) + event wiring + refresh hooks
+- `scripts/gm-hub-data.js` — scene-mob/condition/available-status data assembly
+- `scripts/gm-hub-actions.js` — add/remove/edit condition operations
+- `templates/gm-hub.hbs` — GM Hub Handlebars template
+- `styles/module.css` — player-facing panel styling
+- `styles/gm-hub.css` — GM Hub window styling
 - `lang/en.json` — localization strings
 - `dist/bundle.js` — built output Foundry actually loads (via Rollup)
-- `__tests__/` — Jest test suite, one file per `scripts/` file
+- `__tests__/` — Jest test suite, one file per `scripts/` file, plus shared `helpers/`
 - `CHANGELOG.md` — release history

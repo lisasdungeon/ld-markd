@@ -2,8 +2,18 @@
   "LDMARKD.Settings.ModuleEnabled.Name": "Condition Watch Enabled",
   "LDMARKD.Settings.ModuleEnabled.Hint": "Whether players can currently see NPC/monster condition details. Toggled live via the Condition Watch button in the Token scene controls.",
   "LDMARKD.Settings.ShowControlButton.Name": "Show Scene Control Button",
-  "LDMARKD.Settings.ShowControlButton.Hint": "Show the Condition Watch toggle button in the Token scene controls toolbar (GM only). Turning this off hides the button, but does not by itself disable the feature.",
+  "LDMARKD.Settings.ShowControlButton.Hint": "Show the Condition Watch toolbar controls (GM only). Turning this off hides them, but does not by itself disable the player-facing feature.",
   "LDMARKD.Controls.Toggle.Title": "Toggle Condition Watch",
+  "LDMARKD.Controls.OpenHub.Title": "Open GM Hub",
+  "LDMARKD.Notify.Enabled": "Condition Watch: players can now see NPC conditions.",
+  "LDMARKD.Notify.Disabled": "Condition Watch: hidden from players again.",
   "LDMARKD.Panel.NoConditions": "No active conditions",
-  "LDMARKD.Panel.AppliedBy": "Applied by"
+  "LDMARKD.Panel.AppliedBy": "Applied by",
+  "LDMARKD.Hub.Title": "LD Markd — GM Hub",
+  "LDMARKD.Hub.NoMobs": "No NPCs or monsters on this scene.",
+  "LDMARKD.Hub.NoConditions": "No active conditions",
+  "LDMARKD.Hub.Add": "Add",
+  "LDMARKD.Hub.Edit": "Edit",
+  "LDMARKD.Hub.Remove": "Remove",
+  "LDMARKD.Hub.Active": "active"
 }

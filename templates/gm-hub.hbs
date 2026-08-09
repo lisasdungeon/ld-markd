@@ -1,0 +1,62 @@
+<div class="ldm-hub">
+  {{#if mobs.length}}
+    <div class="ldm-hub-grid">
+      {{#each mobs as |mob|}}
+        <div class="ldm-hub-card" data-token-id="{{mob.tokenId}}">
+          <div class="ldm-hub-card-header" data-action="toggle-card">
+            <img class="ldm-hub-card-img" src="{{mob.img}}" alt="" />
+            <span class="ldm-hub-card-name">{{mob.name}}</span>
+            <span class="ldm-hub-card-count">{{mob.conditions.length}}</span>
+          </div>
+          <div class="ldm-hub-card-body">
+            <div class="ldm-hub-conditions">
+              {{#each mob.conditions as |condition|}}
+                <div class="ldm-hub-condition{{#if condition.disabled}} ldm-disabled{{/if}}">
+                  <img class="ldm-hub-condition-icon" src="{{condition.img}}" alt="" />
+                  <span class="ldm-hub-condition-name">{{condition.name}}</span>
+                  {{#if condition.duration}}
+                    <span class="ldm-hub-condition-duration">{{condition.duration}}</span>
+                  {{/if}}
+                  <button
+                    type="button"
+                    class="ldm-hub-icon-button"
+                    data-action="edit-condition"
+                    data-effect-id="{{condition.id}}"
+                    title="{{localize 'LDMARKD.Hub.Edit'}}"
+                  >
+                    <i class="fas fa-pen"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="ldm-hub-icon-button"
+                    data-action="remove-condition"
+                    data-effect-id="{{condition.id}}"
+                    title="{{localize 'LDMARKD.Hub.Remove'}}"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              {{else}}
+                <div class="ldm-hub-empty">{{localize "LDMARKD.Hub.NoConditions"}}</div>
+              {{/each}}
+            </div>
+            <div class="ldm-hub-add-row">
+              <select class="ldm-hub-status-select" data-token-id="{{mob.tokenId}}">
+                {{#each mob.availableStatuses as |status|}}
+                  <option value="{{status.id}}" {{#if status.active}}disabled{{/if}}>
+                    {{status.name}}{{#if status.active}} ({{localize "LDMARKD.Hub.Active"}}){{/if}}
+                  </option>
+                {{/each}}
+              </select>
+              <button type="button" class="ldm-hub-add-button" data-action="add-condition" data-token-id="{{mob.tokenId}}">
+                {{localize "LDMARKD.Hub.Add"}}
+              </button>
+            </div>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  {{else}}
+    <div class="ldm-hub-empty">{{localize "LDMARKD.Hub.NoMobs"}}</div>
+  {{/if}}
+</div>

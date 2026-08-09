@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 — 2026-08-09
+
+- Added the **GM Hub**: a window listing every NPC/monster token on the
+  current scene only (player characters excluded) as a card. Click a card
+  to see its conditions, add one from the system's own native status list,
+  remove one, or edit one (opens the effect's own sheet). Refreshes live
+  as tokens/conditions/scene change.
+- Added a scene control button that opens the GM Hub, alongside the
+  existing player-visibility toggle in the same toolbar group.
+- The player-visibility toggle now shows a confirmation notification to
+  the GM when flipped, instead of doing so silently.
+
 ## 1.1.0 — 2026-08-09
 
 - Targeted (pinned) panels now dock in the top-right corner of the screen

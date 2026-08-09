@@ -1,0 +1,144 @@
+.ld-markd-gm-hub .window-content {
+  padding: 0;
+}
+
+.ldm-hub {
+  height: 100%;
+  overflow-y: auto;
+  padding: 10px;
+  font-family: var(--font-primary, "Signika", sans-serif);
+}
+
+.ldm-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+
+.ldm-hub-empty {
+  font-style: italic;
+  color: var(--color-text-dark-secondary, #7a7971);
+  padding: 12px;
+}
+
+.ldm-hub-card {
+  border: 1px solid #a68a4a;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.9);
+  color: #e8e2d0;
+  overflow: hidden;
+}
+
+.ldm-hub-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.ldm-hub-card-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #a68a4a;
+  flex: 0 0 auto;
+}
+
+.ldm-hub-card-name {
+  flex: 1 1 auto;
+  font-weight: 700;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ldm-hub-card-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  background: rgba(166, 138, 74, 0.3);
+  border-radius: 10px;
+  padding: 1px 7px;
+}
+
+.ldm-hub-card-body {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 8px 8px;
+  border-top: 1px solid rgba(166, 138, 74, 0.4);
+}
+
+.ldm-hub-card.ldm-expanded .ldm-hub-card-body {
+  display: flex;
+}
+
+.ldm-hub-conditions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ldm-hub-condition {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.ldm-hub-condition.ldm-disabled {
+  opacity: 0.5;
+}
+
+.ldm-hub-condition-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.ldm-hub-condition-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ldm-hub-condition-duration {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: #7fd4ff;
+}
+
+.ldm-hub-icon-button {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: #cfc9b8;
+  cursor: pointer;
+}
+
+.ldm-hub-icon-button:hover {
+  color: #f0e6c8;
+}
+
+.ldm-hub-add-row {
+  display: flex;
+  gap: 6px;
+}
+
+.ldm-hub-status-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ldm-hub-add-button {
+  flex: 0 0 auto;
+}

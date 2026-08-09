@@ -15,7 +15,8 @@
     "Hooks": "readonly",
     "PIXI": "readonly",
     "fromUuidSync": "readonly",
-    "foundry": "readonly"
+    "foundry": "readonly",
+    "CONFIG": "readonly"
   },
   "rules": {
     "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
