@@ -7,12 +7,14 @@ ownership of the token.
 
 ## Features
 
-- **Hover a token** → a panel appears near its top-right corner listing every
-  active condition/effect on it (icon, name, description, remaining
-  duration, and who/what applied it, when that can be resolved).
-- **Target a token** → the panel stays pinned even after you move your mouse
-  away, and keeps updating live (e.g. when a round passes and a duration
-  ticks down).
+- **Hover a token** → a panel floats next to it listing every active
+  condition/effect on it (icon, name, description, remaining duration, and
+  who/what applied it, when that can be resolved).
+- **Target a token** → instead of floating on the token (where it can get
+  in the way), the panel docks in the top-right corner of the screen and
+  stays there — even after you move your mouse away — updating live (e.g.
+  when a round passes and a duration ticks down). Targeting multiple
+  tokens stacks their panels in that same corner.
 - Visible to any player who can currently see the token (normal vision/fog
   rules still apply — hidden tokens are unaffected).
 - **GM scene control toggle**: a control group in the scene controls toolbar

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Targeted (pinned) panels now dock in the top-right corner of the screen
+  instead of floating on top of the token, so they stay out of the way.
+  Multiple targeted tokens stack in that same corner. Hover-only panels
+  are unchanged — they still float next to the token.
+
 ## 1.0.0 — 2026-08-09
 
 Initial packaged build. Not yet signed off by Odinn as feature-complete.

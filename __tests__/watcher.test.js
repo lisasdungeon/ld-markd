@@ -177,6 +177,55 @@ describe("watcher.js", () => {
     });
   });
 
+  describe("docking targeted panels away from the token", () => {
+    it("docks a targeted panel in the top-right dock instead of floating near the token", () => {
+      const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      const panel = document.querySelector(".ld-markd-panel");
+      const dock = document.getElementById("ld-markd-dock");
+      expect(dock).not.toBeNull();
+      expect(panel.parentElement).toBe(dock);
+      expect(panel.classList.contains("ldm-floating")).toBe(false);
+      expect(panel.style.left).toBe("");
+      expect(panel.style.top).toBe("");
+    });
+
+    it("stacks multiple targeted panels in the same dock", () => {
+      const actorA = makeActor({ id: "a" });
+      const actorB = makeActor({ id: "b" });
+      handlers.targetToken({ id: "user1" }, makeToken({ id: "t1", actor: actorA }), true);
+      handlers.targetToken({ id: "user1" }, makeToken({ id: "t2", actor: actorB }), true);
+
+      expect(document.querySelectorAll("#ld-markd-dock")).toHaveLength(1);
+      expect(document.querySelectorAll("#ld-markd-dock .ld-markd-panel")).toHaveLength(2);
+    });
+
+    it("does not re-append an already-docked panel when it re-renders while still pinned", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.targetToken({ id: "user1" }, token, true);
+      const dock = document.getElementById("ld-markd-dock");
+      const panel = document.querySelector(".ld-markd-panel");
+
+      handlers.hoverToken(token, true);
+      expect(document.querySelectorAll("#ld-markd-dock .ld-markd-panel")).toHaveLength(1);
+      expect(panel.parentElement).toBe(dock);
+    });
+
+    it("moves a panel back to floating near the token when un-targeted while still hovered", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      handlers.targetToken({ id: "user1" }, token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      expect(panel.parentElement).toBe(document.getElementById("ld-markd-dock"));
+
+      handlers.targetToken({ id: "user1" }, token, false);
+      expect(panel.parentElement).toBe(document.body);
+      expect(panel.classList.contains("ldm-floating")).toBe(true);
+    });
+  });
+
   describe("deleteToken", () => {
     it("removes an existing panel", () => {
       const actor = makeActor();
@@ -441,6 +490,35 @@ describe("watcher.js", () => {
 
       handlers.hoverToken(token, true);
       expect(global.canvas.app.ticker.add).toHaveBeenCalledTimes(2);
+    });
+
+    it("never attaches the ticker for a targeted-only (docked) panel", () => {
+      const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      expect(global.canvas.app.ticker.add).not.toHaveBeenCalled();
+    });
+
+    it("detaches the ticker once the only remaining panels are docked", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const tick = global.canvas.app.ticker.add.mock.calls[0][0];
+
+      handlers.targetToken({ id: "user1" }, token, true);
+      tick();
+      expect(global.canvas.app.ticker.remove).toHaveBeenCalledWith(tick);
+    });
+
+    it("skips repositioning docked panels on tick", () => {
+      const floatingActor = makeActor({ id: "floating" });
+      const pinnedActor = makeActor({ id: "pinned" });
+      handlers.hoverToken(makeToken({ id: "t1", actor: floatingActor }), true);
+      handlers.targetToken({ id: "user1" }, makeToken({ id: "t2", actor: pinnedActor }), true);
+      const tick = global.canvas.app.ticker.add.mock.calls[0][0];
+
+      const dockedPanel = document.querySelector("#ld-markd-dock .ld-markd-panel");
+      tick();
+      expect(dockedPanel.style.left).toBe("");
     });
   });
 });

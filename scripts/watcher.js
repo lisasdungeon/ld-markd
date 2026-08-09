@@ -12,6 +12,8 @@ import { isModuleEnabled } from "./settings.js";
 const entries = new Map();
 let tickerAttached = false;
 
+const DOCK_ID = "ld-markd-dock";
+
 export function initConditionWatch() {
   Hooks.on("hoverToken", onHoverToken);
   Hooks.on("targetToken", onTargetToken);
@@ -51,14 +53,43 @@ function setEntryState(token, patch) {
   if (shouldShow) {
     if (!entry.el) entry.el = createPanelElement();
     renderContent(entry);
-    if (!entry.el.isConnected) document.body.appendChild(entry.el);
-    positionPanel(entry);
+    placePanel(entry);
     entry.el.classList.toggle("ldm-pinned", entry.pinned);
-    ensureTicker();
   } else {
     entry.el?.remove();
     entries.delete(token.id);
   }
+}
+
+/**
+ * Targeted (pinned) tokens dock a fixed panel in the top-right corner of
+ * the screen, out of the way of the token itself. Hover-only tokens float
+ * a panel next to the token and track it every frame.
+ */
+function placePanel(entry) {
+  const { el, pinned } = entry;
+  if (pinned) {
+    el.classList.remove("ldm-floating");
+    el.style.left = "";
+    el.style.top = "";
+    const dock = getDockContainer();
+    if (el.parentElement !== dock) dock.appendChild(el);
+  } else {
+    el.classList.add("ldm-floating");
+    if (el.parentElement !== document.body) document.body.appendChild(el);
+    positionPanel(entry);
+    ensureTicker();
+  }
+}
+
+function getDockContainer() {
+  let dock = document.getElementById(DOCK_ID);
+  if (!dock) {
+    dock = document.createElement("div");
+    dock.id = DOCK_ID;
+    document.body.appendChild(dock);
+  }
+  return dock;
 }
 
 function removeEntry(tokenId) {
@@ -177,13 +208,22 @@ function positionPanel(entry) {
   if (box.bottom > window.innerHeight) el.style.top = `${Math.max(4, window.innerHeight - box.height - 8)}px`;
 }
 
+function hasFloatingEntries() {
+  for (const entry of entries.values()) {
+    if (!entry.pinned) return true;
+  }
+  return false;
+}
+
 function tick() {
-  if (entries.size === 0) {
+  if (!hasFloatingEntries()) {
     canvas.app.ticker.remove(tick);
     tickerAttached = false;
     return;
   }
-  for (const entry of entries.values()) positionPanel(entry);
+  for (const entry of entries.values()) {
+    if (!entry.pinned) positionPanel(entry);
+  }
 }
 
 function ensureTicker() {
