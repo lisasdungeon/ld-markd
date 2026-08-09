@@ -18,7 +18,7 @@ class FakeApplicationV2 {
 
   _onRender() {}
 
-  render() {
+  async render() {
     this.rendered = true;
     return this;
   }

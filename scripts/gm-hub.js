@@ -64,10 +64,12 @@ function tokenFromCard(el) {
 
 let hubInstance = null;
 
-export function openGMHub() {
+export async function openGMHub() {
   if (!hubInstance) hubInstance = new GMHubApp();
-  hubInstance.render({ force: true });
-  hubInstance.bringToFront?.();
+  await hubInstance.render({ force: true });
+  // Only after render — bringToFront reads element.style and throws if the
+  // frame is not in the DOM yet.
+  if (hubInstance.rendered) hubInstance.bringToFront?.();
 }
 
 export function refreshGMHub() {

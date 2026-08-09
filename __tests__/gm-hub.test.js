@@ -164,17 +164,17 @@ describe("gm-hub.js", () => {
   });
 
   describe("openGMHub / refreshGMHub singleton", () => {
-    it("creates a new instance on first open and renders it forced", () => {
-      openGMHub();
+    it("creates a new instance on first open and renders it forced", async () => {
+      await openGMHub();
       const instance = _getHubInstanceForTests();
       expect(instance).toBeInstanceOf(GMHubApp);
       expect(instance.rendered).toBe(true);
     });
 
-    it("reuses the same instance across multiple opens", () => {
-      openGMHub();
+    it("reuses the same instance across multiple opens", async () => {
+      await openGMHub();
       const first = _getHubInstanceForTests();
-      openGMHub();
+      await openGMHub();
       expect(_getHubInstanceForTests()).toBe(first);
     });
 
@@ -183,16 +183,16 @@ describe("gm-hub.js", () => {
       expect(_getHubInstanceForTests()).toBeNull();
     });
 
-    it("re-renders the hub when refreshed while it is open", () => {
-      openGMHub();
+    it("re-renders the hub when refreshed while it is open", async () => {
+      await openGMHub();
       const instance = _getHubInstanceForTests();
       const renderSpy = jest.spyOn(instance, "render");
       refreshGMHub();
       expect(renderSpy).toHaveBeenCalledWith({ force: true });
     });
 
-    it("does not render when refreshed while the hub is closed", () => {
-      openGMHub();
+    it("does not render when refreshed while the hub is closed", async () => {
+      await openGMHub();
       const instance = _getHubInstanceForTests();
       instance.rendered = false;
       const renderSpy = jest.spyOn(instance, "render");
@@ -200,12 +200,29 @@ describe("gm-hub.js", () => {
       expect(renderSpy).not.toHaveBeenCalled();
     });
 
-    it("brings an already-open hub to the front", () => {
-      openGMHub();
+    it("brings an already-open hub to the front only after render completes", async () => {
+      await openGMHub();
       const instance = _getHubInstanceForTests();
       instance.bringToFront = jest.fn();
-      openGMHub();
+      instance.render = jest.fn(async () => {
+        instance.rendered = true;
+        return instance;
+      });
+      await openGMHub();
+      expect(instance.render).toHaveBeenCalledWith({ force: true });
       expect(instance.bringToFront).toHaveBeenCalled();
+    });
+
+    it("does not call bringToFront when render left the hub unrendered", async () => {
+      await openGMHub();
+      const instance = _getHubInstanceForTests();
+      instance.bringToFront = jest.fn();
+      instance.render = jest.fn(async () => {
+        instance.rendered = false;
+        return instance;
+      });
+      await openGMHub();
+      expect(instance.bringToFront).not.toHaveBeenCalled();
     });
   });
 
@@ -224,9 +241,9 @@ describe("gm-hub.js", () => {
       ]);
     });
 
-    it("invoking a registered hook refreshes the open hub", () => {
+    it("invoking a registered hook refreshes the open hub", async () => {
       registerGMHubHooks();
-      openGMHub();
+      await openGMHub();
       const instance = _getHubInstanceForTests();
       const renderSpy = jest.spyOn(instance, "render");
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.1 — 2026-08-09
+
+- Fixed a crash on opening the GM Hub: `bringToFront()` was called before
+  `render()` finished, so Foundry tried to read `element.style` on an
+  undefined frame. Open now awaits render, then brings the window forward
+  only if it is actually rendered.
+
 ## 1.3.0 — 2026-08-09
 
 - Fixed the GM Hub not opening from the scene-control address-card button.
