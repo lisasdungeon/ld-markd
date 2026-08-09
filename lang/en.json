@@ -1,0 +1,9 @@
+{
+  "LDMARKD.Settings.ModuleEnabled.Name": "Condition Watch Enabled",
+  "LDMARKD.Settings.ModuleEnabled.Hint": "Whether players can currently see NPC/monster condition details. Toggled live via the Condition Watch button in the Token scene controls.",
+  "LDMARKD.Settings.ShowControlButton.Name": "Show Scene Control Button",
+  "LDMARKD.Settings.ShowControlButton.Hint": "Show the Condition Watch toggle button in the Token scene controls toolbar (GM only). Turning this off hides the button, but does not by itself disable the feature.",
+  "LDMARKD.Controls.Toggle.Title": "Toggle Condition Watch",
+  "LDMARKD.Panel.NoConditions": "No active conditions",
+  "LDMARKD.Panel.AppliedBy": "Applied by"
+}

@@ -1,0 +1,23 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": "latest"
+  },
+  "extends": "eslint:recommended",
+  "globals": {
+    "game": "readonly",
+    "ui": "readonly",
+    "canvas": "readonly",
+    "Hooks": "readonly",
+    "PIXI": "readonly",
+    "fromUuidSync": "readonly",
+    "foundry": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+  }
+}

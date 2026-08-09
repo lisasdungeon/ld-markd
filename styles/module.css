@@ -1,0 +1,118 @@
+.ld-markd-panel {
+  position: fixed;
+  z-index: 100;
+  max-width: 320px;
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid #a68a4a;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+  color: #e8e2d0;
+  font-family: var(--font-primary, "Signika", sans-serif);
+  font-size: 13px;
+  padding: 8px;
+  pointer-events: none;
+}
+
+.ld-markd-panel.ldm-pinned {
+  border-color: #c9a94a;
+  box-shadow: 0 0 14px rgba(201, 169, 74, 0.4);
+}
+
+.ld-markd-panel .ldm-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(166, 138, 74, 0.5);
+}
+
+.ld-markd-panel .ldm-token-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #a68a4a;
+}
+
+.ld-markd-panel .ldm-token-name {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.ld-markd-panel .ldm-effects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.ld-markd-panel .ldm-empty {
+  font-style: italic;
+  color: #a8a294;
+}
+
+.ld-markd-panel .ldm-effect {
+  display: flex;
+  gap: 6px;
+}
+
+.ld-markd-panel .ldm-effect-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  border: 1px solid rgba(166, 138, 74, 0.6);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ld-markd-panel .ldm-effect-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ld-markd-panel .ldm-effect-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ld-markd-panel .ldm-effect-name {
+  font-weight: 600;
+  color: #f0e6c8;
+}
+
+.ld-markd-panel .ldm-effect-duration {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #7fd4ff;
+  background: rgba(127, 212, 255, 0.12);
+  border: 1px solid rgba(127, 212, 255, 0.35);
+  border-radius: 3px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.ld-markd-panel .ldm-effect-applied-by {
+  font-size: 11px;
+  color: #b8c9e0;
+  font-style: italic;
+}
+
+.ld-markd-panel .ldm-effect-description {
+  font-size: 12px;
+  color: #cfc9b8;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.ld-markd-panel .ldm-effect-description p {
+  margin: 0 0 4px;
+}
+
+.ld-markd-panel .ldm-effect-description p:last-child {
+  margin-bottom: 0;
+}
