@@ -2,7 +2,7 @@
   "id": "ld-markd",
   "title": "LD Markd",
   "description": "Lets players see the conditions/effects applied to NPCs and monsters — icon, description, and remaining duration — on hover or target. Includes a GM scene control toggle and a settings option to show/hide that toggle.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "authors": [
     {
       "name": "Lisa's Dungeon",

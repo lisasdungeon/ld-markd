@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 — 2026-08-09
 
 - Targeted (pinned) panels now dock in the top-right corner of the screen
   instead of floating on top of the token, so they stay out of the way.

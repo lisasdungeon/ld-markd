@@ -1,6 +1,6 @@
 {
   "name": "ld-markd",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lets players see the conditions/effects applied to NPCs and monsters on hover or target, with a GM scene control toggle.",
   "type": "module",
   "main": "scripts/main.js",
