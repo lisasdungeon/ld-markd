@@ -30,6 +30,12 @@ function renderCardMarkup(root, { tokenId = "tok1", effectId = "eff1" } = {}) {
   `;
 }
 
+/** Invoke a registered ApplicationV2 action handler bound to the app. */
+function invokeAction(app, action, target) {
+  const handler = app.options?.actions?.[action] ?? GMHubApp.DEFAULT_OPTIONS.actions[action];
+  return handler.call(app, {}, target);
+}
+
 describe("gm-hub.js", () => {
   beforeEach(() => {
     _resetForTests();
@@ -50,57 +56,53 @@ describe("gm-hub.js", () => {
     });
   });
 
-  describe("_onRender event wiring", () => {
-    it("toggles the expanded class when the card header is clicked", () => {
+  describe("ApplicationV2 actions", () => {
+    it("toggles the expanded class when the card header action fires", () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
-
       const header = app.element.querySelector('[data-action="toggle-card"]');
       const card = app.element.querySelector(".ldm-hub-card");
-      header.dispatchEvent(new window.Event("click", { bubbles: true }));
+
+      invokeAction(app, "toggle-card", header);
       expect(card.classList.contains("ldm-expanded")).toBe(true);
 
-      header.dispatchEvent(new window.Event("click", { bubbles: true }));
+      invokeAction(app, "toggle-card", header);
       expect(card.classList.contains("ldm-expanded")).toBe(false);
     });
 
     it("adds a condition using the selected status and re-renders", async () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
-      app.rendered = true;
+      app.render = jest.fn();
 
       const addButton = app.element.querySelector('[data-action="add-condition"]');
-      addButton.dispatchEvent(new window.Event("click", { bubbles: true }));
-      await Promise.resolve();
-      await Promise.resolve();
+      await invokeAction(app, "add-condition", addButton);
 
       expect(addCondition).toHaveBeenCalledWith({ id: "tok1" }, "prone");
+      expect(app.render).toHaveBeenCalledWith({ force: true });
     });
 
     it("does nothing when adding a condition with no token resolvable", async () => {
       global.canvas.tokens.get = jest.fn(() => null);
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
+      app.render = jest.fn();
 
       const addButton = app.element.querySelector('[data-action="add-condition"]');
-      addButton.dispatchEvent(new window.Event("click", { bubbles: true }));
-      await Promise.resolve();
+      await invokeAction(app, "add-condition", addButton);
 
       expect(addCondition).not.toHaveBeenCalled();
+      expect(app.render).not.toHaveBeenCalled();
     });
 
     it("does nothing when adding a condition with nothing selected", async () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
       app.element.querySelector(".ldm-hub-status-select").innerHTML = "";
-      app._onRender({}, {});
+      app.render = jest.fn();
 
       const addButton = app.element.querySelector('[data-action="add-condition"]');
-      addButton.dispatchEvent(new window.Event("click", { bubbles: true }));
-      await Promise.resolve();
+      await invokeAction(app, "add-condition", addButton);
 
       expect(addCondition).not.toHaveBeenCalled();
     });
@@ -108,25 +110,23 @@ describe("gm-hub.js", () => {
     it("removes a condition from its card's token and re-renders", async () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
+      app.render = jest.fn();
 
       const removeButton = app.element.querySelector('[data-action="remove-condition"]');
-      removeButton.dispatchEvent(new window.Event("click", { bubbles: true }));
-      await Promise.resolve();
-      await Promise.resolve();
+      await invokeAction(app, "remove-condition", removeButton);
 
       expect(removeCondition).toHaveBeenCalledWith({ id: "tok1" }, "eff1");
+      expect(app.render).toHaveBeenCalledWith({ force: true });
     });
 
     it("does nothing when removing a condition whose card has no resolvable token", async () => {
       global.canvas.tokens.get = jest.fn(() => null);
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
+      app.render = jest.fn();
 
       const removeButton = app.element.querySelector('[data-action="remove-condition"]');
-      removeButton.dispatchEvent(new window.Event("click", { bubbles: true }));
-      await Promise.resolve();
+      await invokeAction(app, "remove-condition", removeButton);
 
       expect(removeCondition).not.toHaveBeenCalled();
     });
@@ -134,10 +134,9 @@ describe("gm-hub.js", () => {
     it("edits a condition from its card's token", () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
 
       const editButton = app.element.querySelector('[data-action="edit-condition"]');
-      editButton.dispatchEvent(new window.Event("click", { bubbles: true }));
+      invokeAction(app, "edit-condition", editButton);
 
       expect(editCondition).toHaveBeenCalledWith({ id: "tok1" }, "eff1");
     });
@@ -145,10 +144,9 @@ describe("gm-hub.js", () => {
     it("does nothing when a condition button is not inside any card", () => {
       const app = new GMHubApp();
       app.element.innerHTML = `<button data-action="edit-condition" data-effect-id="eff1"></button>`;
-      app._onRender({}, {});
 
       const editButton = app.element.querySelector('[data-action="edit-condition"]');
-      editButton.dispatchEvent(new window.Event("click", { bubbles: true }));
+      invokeAction(app, "edit-condition", editButton);
 
       expect(editCondition).not.toHaveBeenCalled();
     });
@@ -157,17 +155,16 @@ describe("gm-hub.js", () => {
       global.canvas.tokens.get = jest.fn(() => null);
       const app = new GMHubApp();
       renderCardMarkup(app.element);
-      app._onRender({}, {});
 
       const editButton = app.element.querySelector('[data-action="edit-condition"]');
-      editButton.dispatchEvent(new window.Event("click", { bubbles: true }));
+      invokeAction(app, "edit-condition", editButton);
 
       expect(editCondition).not.toHaveBeenCalled();
     });
   });
 
   describe("openGMHub / refreshGMHub singleton", () => {
-    it("creates a new instance on first open and renders it", () => {
+    it("creates a new instance on first open and renders it forced", () => {
       openGMHub();
       const instance = _getHubInstanceForTests();
       expect(instance).toBeInstanceOf(GMHubApp);
@@ -191,7 +188,7 @@ describe("gm-hub.js", () => {
       const instance = _getHubInstanceForTests();
       const renderSpy = jest.spyOn(instance, "render");
       refreshGMHub();
-      expect(renderSpy).toHaveBeenCalledWith();
+      expect(renderSpy).toHaveBeenCalledWith({ force: true });
     });
 
     it("does not render when refreshed while the hub is closed", () => {
@@ -201,6 +198,14 @@ describe("gm-hub.js", () => {
       const renderSpy = jest.spyOn(instance, "render");
       refreshGMHub();
       expect(renderSpy).not.toHaveBeenCalled();
+    });
+
+    it("brings an already-open hub to the front", () => {
+      openGMHub();
+      const instance = _getHubInstanceForTests();
+      instance.bringToFront = jest.fn();
+      openGMHub();
+      expect(instance.bringToFront).toHaveBeenCalled();
     });
   });
 
@@ -228,7 +233,7 @@ describe("gm-hub.js", () => {
       const [, callback] = global.Hooks.on.mock.calls[0];
       callback();
 
-      expect(renderSpy).toHaveBeenCalled();
+      expect(renderSpy).toHaveBeenCalledWith({ force: true });
     });
   });
 });

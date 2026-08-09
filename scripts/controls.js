@@ -5,14 +5,20 @@ const GROUP_NAME = "ld-markd";
 const TOGGLE_TOOL_NAME = "ld-markd-toggle";
 const HUB_TOOL_NAME = "ld-markd-open-hub";
 
+/**
+ * Foundry v13 SceneControls calls tool onChange as (event, active).
+ * Button tools fire once with active=true; toggles fire with the new state.
+ */
 function buildToggleTool() {
   return {
     name: TOGGLE_TOOL_NAME,
     title: "LDMARKD.Controls.Toggle.Title",
     icon: "fa-solid fa-notes-medical",
     toggle: true,
+    button: false,
     active: game.settings.get(MODULE_ID, SETTINGS.MODULE_ENABLED),
-    onChange: (active) => {
+    order: 1,
+    onChange: (_event, active) => {
       game.settings.set(MODULE_ID, SETTINGS.MODULE_ENABLED, active);
       const key = active ? "LDMARKD.Notify.Enabled" : "LDMARKD.Notify.Disabled";
       ui.notifications.info(game.i18n.localize(key));
@@ -26,7 +32,9 @@ function buildHubTool() {
     title: "LDMARKD.Controls.OpenHub.Title",
     icon: "fa-solid fa-address-card",
     button: true,
-    onChange: (active) => {
+    toggle: false,
+    order: 2,
+    onChange: (_event, active) => {
       if (!active) return;
       openGMHub();
     }

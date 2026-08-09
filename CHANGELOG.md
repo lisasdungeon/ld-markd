@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 — 2026-08-09
+
+- Fixed the GM Hub not opening from the scene-control address-card button.
+  Foundry v13 calls tool handlers as `onChange(event, active)`; the previous
+  handlers read the first argument as the active flag, so the hub open path
+  and the visibility toggle never received the real boolean.
+- Hub window interactions (expand card, add/remove/edit condition) now use
+  ApplicationV2 `actions` instead of re-binding DOM listeners every render.
+- Hub open/refresh always force-renders and brings the window to the front.
+
 ## 1.2.0 — 2026-08-09
 
 - Added the **GM Hub**: a window listing every NPC/monster token on the

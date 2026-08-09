@@ -7,8 +7,15 @@ export class GMHubApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "ld-markd-gm-hub",
     classes: ["ld-markd-gm-hub"],
-    window: { title: "LDMARKD.Hub.Title", resizable: true },
-    position: { width: 760, height: 640 }
+    tag: "div",
+    window: { title: "LDMARKD.Hub.Title", resizable: true, minimizable: true },
+    position: { width: 760, height: 640 },
+    actions: {
+      "toggle-card": GMHubApp.#onToggleCard,
+      "add-condition": GMHubApp.#onAddCondition,
+      "remove-condition": GMHubApp.#onRemoveCondition,
+      "edit-condition": GMHubApp.#onEditCondition
+    }
   };
 
   static PARTS = {
@@ -21,48 +28,33 @@ export class GMHubApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return context;
   }
 
-  _onRender(context, options) {
-    super._onRender(context, options);
-    wireHubEvents(this.element, this);
+  static #onToggleCard(event, target) {
+    target.closest(".ldm-hub-card")?.classList.toggle("ldm-expanded");
   }
-}
 
-function wireHubEvents(root, app) {
-  root.querySelectorAll('[data-action="toggle-card"]').forEach((el) => {
-    el.addEventListener("click", (event) => {
-      event.currentTarget.closest(".ldm-hub-card")?.classList.toggle("ldm-expanded");
-    });
-  });
+  static async #onAddCondition(event, target) {
+    const tokenId = target.dataset.tokenId;
+    const select = this.element.querySelector(`select[data-token-id="${tokenId}"]`);
+    const token = canvas.tokens.get(tokenId);
+    if (!token || !select?.value) return;
+    await addCondition(token, select.value);
+    await this.render({ force: true });
+  }
 
-  root.querySelectorAll('[data-action="add-condition"]').forEach((el) => {
-    el.addEventListener("click", async (event) => {
-      const tokenId = event.currentTarget.dataset.tokenId;
-      const select = root.querySelector(`select[data-token-id="${tokenId}"]`);
-      const token = canvas.tokens.get(tokenId);
-      if (!token || !select?.value) return;
-      await addCondition(token, select.value);
-      app.render();
-    });
-  });
+  static async #onRemoveCondition(event, target) {
+    const token = tokenFromCard(target);
+    const effectId = target.dataset.effectId;
+    if (!token) return;
+    await removeCondition(token, effectId);
+    await this.render({ force: true });
+  }
 
-  root.querySelectorAll('[data-action="remove-condition"]').forEach((el) => {
-    el.addEventListener("click", async (event) => {
-      const token = tokenFromCard(event.currentTarget);
-      const effectId = event.currentTarget.dataset.effectId;
-      if (!token) return;
-      await removeCondition(token, effectId);
-      app.render();
-    });
-  });
-
-  root.querySelectorAll('[data-action="edit-condition"]').forEach((el) => {
-    el.addEventListener("click", (event) => {
-      const token = tokenFromCard(event.currentTarget);
-      const effectId = event.currentTarget.dataset.effectId;
-      if (!token) return;
-      editCondition(token, effectId);
-    });
-  });
+  static #onEditCondition(event, target) {
+    const token = tokenFromCard(target);
+    const effectId = target.dataset.effectId;
+    if (!token) return;
+    editCondition(token, effectId);
+  }
 }
 
 function tokenFromCard(el) {
@@ -74,11 +66,12 @@ let hubInstance = null;
 
 export function openGMHub() {
   if (!hubInstance) hubInstance = new GMHubApp();
-  hubInstance.render(true);
+  hubInstance.render({ force: true });
+  hubInstance.bringToFront?.();
 }
 
 export function refreshGMHub() {
-  if (hubInstance?.rendered) hubInstance.render();
+  if (hubInstance?.rendered) hubInstance.render({ force: true });
 }
 
 export function registerGMHubHooks() {

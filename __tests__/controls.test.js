@@ -84,7 +84,8 @@ describe("controls.js", () => {
     const controls = {};
     handler(controls);
     const tool = controls["ld-markd"].tools["ld-markd-toggle"];
-    tool.onChange(true);
+    // Foundry v13 signature: (event, active)
+    tool.onChange({}, true);
     expect(global.game.settings.set).toHaveBeenCalledWith(MODULE_ID, SETTINGS.MODULE_ENABLED, true);
     expect(global.ui.notifications.info).toHaveBeenCalledWith("LDMARKD.Notify.Enabled");
   });
@@ -94,7 +95,7 @@ describe("controls.js", () => {
     const controls = {};
     handler(controls);
     const tool = controls["ld-markd"].tools["ld-markd-toggle"];
-    tool.onChange(false);
+    tool.onChange({}, false);
     expect(global.game.settings.set).toHaveBeenCalledWith(MODULE_ID, SETTINGS.MODULE_ENABLED, false);
     expect(global.ui.notifications.info).toHaveBeenCalledWith("LDMARKD.Notify.Disabled");
   });
@@ -105,10 +106,10 @@ describe("controls.js", () => {
     handler(controls);
     const tool = controls["ld-markd"].tools["ld-markd-open-hub"];
 
-    tool.onChange(false);
+    tool.onChange({}, false);
     expect(openGMHub).not.toHaveBeenCalled();
 
-    tool.onChange(true);
+    tool.onChange({}, true);
     expect(openGMHub).toHaveBeenCalledTimes(1);
   });
 });

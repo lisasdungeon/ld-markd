@@ -6,7 +6,8 @@
  */
 class FakeApplicationV2 {
   constructor(options = {}) {
-    this.options = options;
+    const defaults = this.constructor.DEFAULT_OPTIONS ?? {};
+    this.options = { ...defaults, ...options, actions: { ...(defaults.actions ?? {}), ...(options.actions ?? {}) } };
     this.rendered = false;
     this.element = document.createElement("div");
   }
@@ -17,10 +18,12 @@ class FakeApplicationV2 {
 
   _onRender() {}
 
-  render(force) {
+  render() {
     this.rendered = true;
     return this;
   }
+
+  bringToFront() {}
 
   close() {
     this.rendered = false;
