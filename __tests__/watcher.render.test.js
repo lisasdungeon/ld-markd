@@ -50,6 +50,29 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(panel.innerHTML).not.toContain("Suppressed");
     });
 
+    it("prefers actor.appliedEffects when present (includes transferred item effects)", () => {
+      const actor = makeActor({
+        effects: { contents: [makeEffect({ name: "OnActorOnly" })] },
+        appliedEffects: [makeEffect({ name: "Transferred" })]
+      });
+      handlers.hoverToken(makeToken({ actor }), true);
+      const html = document.querySelector(".ld-markd-panel").innerHTML;
+      expect(html).toContain("Transferred");
+      expect(html).not.toContain("OnActorOnly");
+    });
+
+    it("uses allApplicableEffects when appliedEffects is absent", () => {
+      const actor = makeActor({ effects: undefined });
+      actor.allApplicableEffects = function* () {
+        yield makeEffect({ name: "FromItems", disabled: false, isSuppressed: false });
+        yield makeEffect({ name: "Off", disabled: true });
+      };
+      handlers.hoverToken(makeToken({ actor }), true);
+      const html = document.querySelector(".ld-markd-panel").innerHTML;
+      expect(html).toContain("FromItems");
+      expect(html).not.toContain("Off");
+    });
+
     it("falls back to an empty icon src when the effect has no image", () => {
       const effect = makeEffect({ img: undefined });
       const actor = makeActor({ effects: { contents: [effect] } });
@@ -94,6 +117,22 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
       expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
+    });
+
+    it("omits indefinite duration badges (None / infinite remaining / infinite seconds)", () => {
+      for (const duration of [
+        { label: "None" },
+        { label: "forever", remaining: Infinity },
+        { label: "forever", seconds: Infinity },
+        { label: "n/a" },
+        { label: "-" }
+      ]) {
+        document.body.innerHTML = "";
+        const actor = makeActor({ effects: { contents: [makeEffect({ duration })] } });
+        handlers.hoverToken(makeToken({ actor }), true);
+        expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
+        handlers.hoverToken(makeToken({ actor }), false);
+      }
     });
 
     it("swallows an error thrown while reading effect.duration", () => {

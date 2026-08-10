@@ -30,6 +30,12 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
 
+    it("ignores player-owned tokens (PCs are not NPC/monster targets)", () => {
+      const actor = makeActor({ hasPlayerOwner: true });
+      handlers.hoverToken(makeToken({ actor }), true);
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
     it("does not show a panel on hover-in while the module is disabled", () => {
       global.game.settings.get = jest.fn(() => false);
       const actor = makeActor();
@@ -75,6 +81,12 @@ describe("watcher.js — hooks and panel lifecycle", () => {
     it("does not pin a panel while the module is disabled", () => {
       global.game.settings.get = jest.fn(() => false);
       const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
+    it("ignores targeting a player-owned token", () => {
+      const actor = makeActor({ hasPlayerOwner: true });
       handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
@@ -210,6 +222,28 @@ describe("watcher.js — hooks and panel lifecycle", () => {
 
       handlers.createActiveEffect({ parent: actor });
       handlers.deleteActiveEffect({ parent: actor });
+    });
+
+    it("resolves an Item parent up to its owning actor for transferred effects", () => {
+      const actor = makeActor({ effects: { contents: [] } });
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+
+      actor.effects = { contents: [makeEffect({ name: "Blessed" })] };
+      handlers.updateActiveEffect({ parent: { actor } });
+      expect(panel.innerHTML).toContain("Blessed");
+    });
+
+    it("resolves a documentName=Item parent via parent.parent", () => {
+      const actor = makeActor({ effects: { contents: [] } });
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+
+      actor.effects = { contents: [makeEffect({ name: "Hexed" })] };
+      handlers.createActiveEffect({ parent: { documentName: "Item", parent: actor } });
+      expect(panel.innerHTML).toContain("Hexed");
     });
 
     it("ignores effect changes with no parent actor", () => {

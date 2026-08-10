@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.2 — 2026-08-10
+
+- Player hover/target panels now only open for NPC/monster tokens
+  (`actor.hasPlayerOwner === false`), matching the module description and
+  the GM Hub filter. Player characters no longer get condition panels.
+- Conditions list now includes transferred item Active Effects via
+  `appliedEffects` / `allApplicableEffects` (Foundry v13/v14 + dnd5e), not
+  only effects embedded directly on the actor.
+- ActiveEffect create/update/delete hooks resolve Item parents up to their
+  owning actor so transferred-effect changes refresh open panels.
+- Indefinite duration badges ("None" / infinite remaining) are no longer
+  shown on panels or in the GM Hub.
+- GM Hub card expand/collapse state persists across force re-renders (add
+  / remove condition no longer collapses the card you were editing).
+
 ## 1.3.1 — 2026-08-09
 
 - Fixed a crash on opening the GM Hub: `bringToFront()` was called before

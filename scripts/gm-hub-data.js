@@ -20,9 +20,13 @@ function buildMobCard(token) {
   };
 }
 
+/**
+ * Conditions on the actor plus transferred item effects. Disabled effects
+ * stay visible (dimmed in the template) so the GM can still edit/remove them.
+ */
 function getConditions(actor) {
-  if (!actor?.effects) return [];
-  return actor.effects.contents
+  const effects = listApplicableEffects(actor);
+  return effects
     .filter((effect) => !effect.isSuppressed)
     .map((effect) => ({
       id: effect.id,
@@ -33,9 +37,22 @@ function getConditions(actor) {
     }));
 }
 
+function listApplicableEffects(actor) {
+  if (typeof actor.allApplicableEffects === "function") {
+    return [...actor.allApplicableEffects()];
+  }
+  if (!actor.effects) return [];
+  return actor.effects.contents;
+}
+
 function getDurationLabel(effect) {
   try {
-    return effect.duration?.label || null;
+    const d = effect.duration;
+    const label = d?.label;
+    if (!label) return null;
+    if (d.remaining === Infinity || d.seconds === Infinity) return null;
+    if (/^(none|n\/a|—|-)$/i.test(String(label).trim())) return null;
+    return label;
   } catch (err) {
     return null;
   }
@@ -44,8 +61,9 @@ function getDurationLabel(effect) {
 function getAvailableStatuses(actor) {
   const statuses = CONFIG.statusEffects ?? [];
   const active = actor.statuses ?? new Set();
-  return statuses
-    .filter((status) => status.id)
+  // CONFIG.statusEffects is a Proxy-array (v13+); iterate only array slots.
+  return [...statuses]
+    .filter((status) => status?.id)
     .map((status) => ({
       id: status.id,
       name: game.i18n.localize(status.name ?? status.label ?? status.id),

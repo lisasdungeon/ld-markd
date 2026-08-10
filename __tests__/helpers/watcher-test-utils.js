@@ -12,8 +12,10 @@ export function makeToken({ id = "tok1", actor = null, name = "Goblin", x = 0, y
   };
 }
 
-export function makeActor({ id = "actor1", img = "actor.webp", effects } = {}) {
-  return { id, img, effects };
+export function makeActor({ id = "actor1", img = "actor.webp", effects, hasPlayerOwner = false, appliedEffects } = {}) {
+  const actor = { id, img, effects, hasPlayerOwner };
+  if (appliedEffects !== undefined) actor.appliedEffects = appliedEffects;
+  return actor;
 }
 
 export function makeEffect(overrides = {}) {

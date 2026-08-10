@@ -48,16 +48,25 @@ describe("gm-hub.js", () => {
   });
 
   describe("_prepareContext", () => {
-    it("adds the scene mobs to the rendered context", async () => {
+    it("adds the scene mobs to the rendered context with expanded flags", async () => {
       const app = new GMHubApp();
       const context = await app._prepareContext({});
       expect(getSceneMobs).toHaveBeenCalled();
-      expect(context.mobs).toEqual([{ tokenId: "tok1", name: "Goblin", img: "", conditions: [], availableStatuses: [] }]);
+      expect(context.mobs).toEqual([
+        { tokenId: "tok1", name: "Goblin", img: "", conditions: [], availableStatuses: [], expanded: false }
+      ]);
+    });
+
+    it("marks previously expanded cards as expanded after a re-render", async () => {
+      const app = new GMHubApp();
+      app.expandedTokenIds.add("tok1");
+      const context = await app._prepareContext({});
+      expect(context.mobs[0].expanded).toBe(true);
     });
   });
 
   describe("ApplicationV2 actions", () => {
-    it("toggles the expanded class when the card header action fires", () => {
+    it("toggles the expanded class and remembers it across re-renders", () => {
       const app = new GMHubApp();
       renderCardMarkup(app.element);
       const header = app.element.querySelector('[data-action="toggle-card"]');
@@ -65,9 +74,32 @@ describe("gm-hub.js", () => {
 
       invokeAction(app, "toggle-card", header);
       expect(card.classList.contains("ldm-expanded")).toBe(true);
+      expect(app.expandedTokenIds.has("tok1")).toBe(true);
 
       invokeAction(app, "toggle-card", header);
       expect(card.classList.contains("ldm-expanded")).toBe(false);
+      expect(app.expandedTokenIds.has("tok1")).toBe(false);
+    });
+
+    it("does nothing when the toggle action is not inside a card", () => {
+      const app = new GMHubApp();
+      app.element.innerHTML = `<div data-action="toggle-card"></div>`;
+      const target = app.element.querySelector('[data-action="toggle-card"]');
+      expect(() => invokeAction(app, "toggle-card", target)).not.toThrow();
+      expect(app.expandedTokenIds.size).toBe(0);
+    });
+
+    it("toggles the class but skips the set when the card has no token id", () => {
+      const app = new GMHubApp();
+      app.element.innerHTML = `
+        <div class="ldm-hub-card">
+          <div data-action="toggle-card"></div>
+        </div>
+      `;
+      const target = app.element.querySelector('[data-action="toggle-card"]');
+      invokeAction(app, "toggle-card", target);
+      expect(app.element.querySelector(".ldm-hub-card").classList.contains("ldm-expanded")).toBe(true);
+      expect(app.expandedTokenIds.size).toBe(0);
     });
 
     it("adds a condition using the selected status and re-renders", async () => {

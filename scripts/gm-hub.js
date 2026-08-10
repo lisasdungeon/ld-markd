@@ -22,14 +22,26 @@ export class GMHubApp extends HandlebarsApplicationMixin(ApplicationV2) {
     main: { template: "modules/ld-markd/templates/gm-hub.hbs" }
   };
 
+  /** @type {Set<string>} Token ids whose cards stay expanded across re-renders. */
+  expandedTokenIds = new Set();
+
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
-    context.mobs = getSceneMobs();
+    context.mobs = getSceneMobs().map((mob) => ({
+      ...mob,
+      expanded: this.expandedTokenIds.has(mob.tokenId)
+    }));
     return context;
   }
 
   static #onToggleCard(event, target) {
-    target.closest(".ldm-hub-card")?.classList.toggle("ldm-expanded");
+    const card = target.closest(".ldm-hub-card");
+    if (!card) return;
+    card.classList.toggle("ldm-expanded");
+    const tokenId = card.dataset.tokenId;
+    if (!tokenId) return;
+    if (card.classList.contains("ldm-expanded")) this.expandedTokenIds.add(tokenId);
+    else this.expandedTokenIds.delete(tokenId);
   }
 
   static async #onAddCondition(event, target) {

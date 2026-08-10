@@ -17,9 +17,9 @@ const DOCK_ID = "ld-markd-dock";
 export function initConditionWatch() {
   Hooks.on("hoverToken", onHoverToken);
   Hooks.on("targetToken", onTargetToken);
-  Hooks.on("updateActiveEffect", (effect) => refreshActor(effect.parent));
-  Hooks.on("createActiveEffect", (effect) => refreshActor(effect.parent));
-  Hooks.on("deleteActiveEffect", (effect) => refreshActor(effect.parent));
+  Hooks.on("updateActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
+  Hooks.on("createActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
+  Hooks.on("deleteActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
   Hooks.on("updateActor", (actor) => refreshActor(actor));
   Hooks.on("updateCombat", () => refreshAllContent());
   Hooks.on("deleteToken", (tokenDoc) => removeEntry(tokenDoc.id));
@@ -28,15 +28,32 @@ export function initConditionWatch() {
   });
 }
 
+/** NPC/monster proxy: any actor with no player owner (system-agnostic). */
+function isNpcToken(token) {
+  return Boolean(token?.actor) && token.actor.hasPlayerOwner === false;
+}
+
+/**
+ * ActiveEffect hooks fire with parent = Actor or Item. Resolve to the Actor
+ * so transferred item-effects still refresh open panels.
+ */
+function actorFromEffectParent(effect) {
+  const parent = effect?.parent;
+  if (!parent) return null;
+  if (parent.actor) return parent.actor;
+  if (parent.documentName === "Item" && parent.parent) return parent.parent;
+  return parent;
+}
+
 function onHoverToken(token, hovered) {
-  if (!token?.actor) return;
+  if (!isNpcToken(token)) return;
   if (hovered && !isModuleEnabled()) return;
   setEntryState(token, { hovered });
 }
 
 function onTargetToken(user, token, targeted) {
   if (user.id !== game.userId) return;
-  if (!token?.actor) return;
+  if (!isNpcToken(token)) return;
   if (targeted && !isModuleEnabled()) return;
   setEntryState(token, { pinned: targeted });
 }
@@ -95,12 +112,12 @@ function getDockContainer() {
 function removeEntry(tokenId) {
   const entry = entries.get(tokenId);
   if (!entry) return;
-  entry.el.remove();
+  entry.el?.remove();
   entries.delete(tokenId);
 }
 
 function clearAll() {
-  for (const entry of entries.values()) entry.el.remove();
+  for (const entry of entries.values()) entry.el?.remove();
   entries.clear();
 }
 
@@ -121,9 +138,20 @@ function createPanelElement() {
   return el;
 }
 
+/**
+ * Active conditions only. Prefer core appliedEffects (includes transferred
+ * item effects); fall back to actor.effects for older/simple actors.
+ */
 function getEffects(token) {
   const actor = token.actor;
-  if (!actor?.effects) return [];
+  if (!actor) return [];
+  if (Array.isArray(actor.appliedEffects)) {
+    return actor.appliedEffects;
+  }
+  if (typeof actor.allApplicableEffects === "function") {
+    return [...actor.allApplicableEffects()].filter((e) => !e.disabled && !e.isSuppressed);
+  }
+  if (!actor.effects) return [];
   return actor.effects.contents.filter((e) => !e.disabled && !e.isSuppressed);
 }
 
@@ -164,7 +192,12 @@ function effectRowHTML(effect) {
 function getDurationLabel(effect) {
   try {
     const d = effect.duration;
-    return d?.label || null;
+    const label = d?.label;
+    if (!label) return null;
+    // Indefinite effects often surface as "None" / infinite remaining — omit badge.
+    if (d.remaining === Infinity || d.seconds === Infinity) return null;
+    if (/^(none|n\/a|—|-)$/i.test(String(label).trim())) return null;
+    return label;
   } catch (err) {
     return null;
   }

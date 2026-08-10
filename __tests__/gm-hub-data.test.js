@@ -89,6 +89,33 @@ describe("gm-hub-data.js", () => {
       expect(conditions[1].disabled).toBe(true);
     });
 
+    it("uses allApplicableEffects when available (transferred item effects)", () => {
+      const transferred = makeEffect({ id: "xfer", name: "FromItem" });
+      const actor = makeActor({ effects: { contents: [] } });
+      actor.allApplicableEffects = function* () {
+        yield transferred;
+      };
+      global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
+      expect(getSceneMobs()[0].conditions.map((c) => c.id)).toEqual(["xfer"]);
+    });
+
+    it("omits indefinite duration labels (infinite remaining or seconds)", () => {
+      const byRemaining = makeEffect({ id: "r", duration: { label: "forever", remaining: Infinity } });
+      const bySeconds = makeEffect({ id: "s", duration: { label: "forever", seconds: Infinity } });
+      const byNoneWord = makeEffect({ id: "n", duration: { label: "None" } });
+      const actor = makeActor({ effects: { contents: [byRemaining, bySeconds, byNoneWord] } });
+      global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
+      expect(getSceneMobs()[0].conditions.every((c) => c.duration === null)).toBe(true);
+    });
+
+    it("returns no conditions when listApplicableEffects receives a nullish actor path", () => {
+      // Actor object is truthy for the scene filter, but effects path is empty and
+      // allApplicableEffects is missing — covers the effects-collection fallback.
+      const actor = makeActor({ effects: null });
+      global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
+      expect(getSceneMobs()[0].conditions).toEqual([]);
+    });
+
     it("falls back to an empty icon src when a condition has no image", () => {
       const effect = makeEffect({ img: undefined });
       const actor = makeActor({ effects: { contents: [effect] } });
@@ -133,7 +160,7 @@ describe("gm-hub-data.js", () => {
     });
 
     it("skips status entries with no id", () => {
-      global.CONFIG = { statusEffects: [{ name: "No Id" }] };
+      global.CONFIG = { statusEffects: [{ name: "No Id" }, null, undefined] };
       const actor = makeActor();
       global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
       expect(getSceneMobs()[0].availableStatuses).toEqual([]);

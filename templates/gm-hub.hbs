@@ -2,7 +2,7 @@
   {{#if mobs.length}}
     <div class="ldm-hub-grid">
       {{#each mobs as |mob|}}
-        <div class="ldm-hub-card" data-token-id="{{mob.tokenId}}">
+        <div class="ldm-hub-card{{#if mob.expanded}} ldm-expanded{{/if}}" data-token-id="{{mob.tokenId}}">
           <div class="ldm-hub-card-header" data-action="toggle-card">
             <img class="ldm-hub-card-img" src="{{mob.img}}" alt="" />
             <span class="ldm-hub-card-name">{{mob.name}}</span>
