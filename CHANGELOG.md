@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.7 — 2026-08-10
+
+- GM Hub cards open expanded by default so condition lists, edit/remove
+  controls, and the Add row are visible without clicking each card first.
+  Headers still collapse/expand a card; collapsed state is remembered while
+  the window stays open.
+
 ## 1.3.6 — 2026-08-10
 
 - Condition descriptions now run through Foundry's TextEditor enrichment so

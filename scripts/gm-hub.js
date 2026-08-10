@@ -22,14 +22,18 @@ export class GMHubApp extends HandlebarsApplicationMixin(ApplicationV2) {
     main: { template: "modules/ld-markd/templates/gm-hub.hbs" }
   };
 
-  /** @type {Set<string>} Token ids whose cards stay expanded across re-renders. */
-  expandedTokenIds = new Set();
+  /**
+   * Token ids the GM has manually collapsed. All other cards render expanded
+   * by default so condition details are visible without an extra click.
+   * @type {Set<string>}
+   */
+  collapsedTokenIds = new Set();
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     context.mobs = getSceneMobs().map((mob) => ({
       ...mob,
-      expanded: this.expandedTokenIds.has(mob.tokenId)
+      expanded: !this.collapsedTokenIds.has(mob.tokenId)
     }));
     return context;
   }
@@ -40,8 +44,8 @@ export class GMHubApp extends HandlebarsApplicationMixin(ApplicationV2) {
     card.classList.toggle("ldm-expanded");
     const tokenId = card.dataset.tokenId;
     if (!tokenId) return;
-    if (card.classList.contains("ldm-expanded")) this.expandedTokenIds.add(tokenId);
-    else this.expandedTokenIds.delete(tokenId);
+    if (card.classList.contains("ldm-expanded")) this.collapsedTokenIds.delete(tokenId);
+    else this.collapsedTokenIds.add(tokenId);
   }
 
   static async #onAddCondition(event, target) {
