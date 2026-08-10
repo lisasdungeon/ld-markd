@@ -269,6 +269,9 @@ describe("gm-hub.js", () => {
         "createActiveEffect",
         "updateActiveEffect",
         "deleteActiveEffect",
+        "createItem",
+        "updateItem",
+        "deleteItem",
         "canvasReady"
       ]);
     });

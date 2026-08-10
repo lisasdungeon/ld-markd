@@ -50,27 +50,65 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(panel.innerHTML).not.toContain("Suppressed");
     });
 
-    it("prefers actor.appliedEffects when present (includes transferred item effects)", () => {
-      const actor = makeActor({
-        effects: { contents: [makeEffect({ name: "OnActorOnly" })] },
-        appliedEffects: [makeEffect({ name: "Transferred" })]
-      });
+    it("uses allApplicableEffects when present (includes transferred item effects)", () => {
+      const actor = makeActor({ effects: { contents: [makeEffect({ name: "OnActorOnly" })] } });
+      actor.allApplicableEffects = function* () {
+        yield makeEffect({ name: "Transferred", disabled: false, isSuppressed: false });
+      };
       handlers.hoverToken(makeToken({ actor }), true);
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).toContain("Transferred");
       expect(html).not.toContain("OnActorOnly");
     });
 
-    it("uses allApplicableEffects when appliedEffects is absent", () => {
+    it("shows PF2e conditions from actor.conditions", () => {
+      global.game.system = { id: "pf2e" };
       const actor = makeActor({ effects: undefined });
-      actor.allApplicableEffects = function* () {
-        yield makeEffect({ name: "FromItems", disabled: false, isSuppressed: false });
-        yield makeEffect({ name: "Off", disabled: true });
+      actor.conditions = {
+        active: [{ id: "c1", name: "Blinded", img: "b.webp", active: true }]
       };
+      actor.itemTypes = { effect: [] };
+      handlers.hoverToken(makeToken({ actor }), true);
+      expect(document.querySelector(".ld-markd-panel").innerHTML).toContain("Blinded");
+    });
+
+    it("renders duration, applied-by, and description from display conditions", () => {
+      global.game.system = { id: "pf2e" };
+      const actor = makeActor({ effects: undefined });
+      actor.conditions = {
+        active: [
+          {
+            id: "c1",
+            name: "Sickened",
+            img: "s.webp",
+            active: true,
+            remainingDuration: { expired: false, remaining: 90 },
+            appliedBy: { name: "Plague" },
+            system: { description: { value: "<p>Sick.</p>" } }
+          }
+        ]
+      };
+      actor.itemTypes = { effect: [] };
       handlers.hoverToken(makeToken({ actor }), true);
       const html = document.querySelector(".ld-markd-panel").innerHTML;
-      expect(html).toContain("FromItems");
-      expect(html).not.toContain("Off");
+      expect(html).toContain("ldm-effect-duration");
+      expect(html).toContain("Plague");
+      expect(html).toContain("<p>Sick.</p>");
+    });
+
+    it("renders a condition row without optional duration/applied-by/description", () => {
+      global.game.system = { id: "pf2e" };
+      const actor = makeActor({ effects: undefined });
+      actor.conditions = {
+        active: [{ id: "c1", name: "Prone", img: undefined, active: true }]
+      };
+      actor.itemTypes = { effect: [] };
+      handlers.hoverToken(makeToken({ actor }), true);
+      const html = document.querySelector(".ld-markd-panel").innerHTML;
+      expect(html).toContain("Prone");
+      expect(html).not.toContain("ldm-effect-duration");
+      expect(html).not.toContain("ldm-effect-applied-by");
+      expect(html).not.toContain("ldm-effect-description");
     });
 
     it("falls back to an empty icon src when the effect has no image", () => {

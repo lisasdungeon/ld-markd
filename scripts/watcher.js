@@ -1,4 +1,5 @@
 import { isModuleEnabled } from "./settings.js";
+import { listDisplayConditions } from "./condition-data.js";
 
 /**
  * @typedef {object} PanelEntry
@@ -20,6 +21,10 @@ export function initConditionWatch() {
   Hooks.on("updateActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
   Hooks.on("createActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
   Hooks.on("deleteActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
+  // PF2e (and similar) store conditions as Items — refresh when those change.
+  Hooks.on("createItem", (item) => refreshActor(actorFromItem(item)));
+  Hooks.on("updateItem", (item) => refreshActor(actorFromItem(item)));
+  Hooks.on("deleteItem", (item) => refreshActor(actorFromItem(item)));
   Hooks.on("updateActor", (actor) => refreshActor(actor));
   Hooks.on("updateCombat", () => refreshAllContent());
   Hooks.on("deleteToken", (tokenDoc) => removeEntry(tokenDoc.id));
@@ -43,6 +48,14 @@ function actorFromEffectParent(effect) {
   if (parent.actor) return parent.actor;
   if (parent.documentName === "Item" && parent.parent) return parent.parent;
   return parent;
+}
+
+/** Item hooks: parent is the Actor for embedded items. */
+function actorFromItem(item) {
+  if (!item) return null;
+  if (item.actor) return item.actor;
+  if (item.parent?.documentName === "Actor" || item.parent?.effects) return item.parent;
+  return item.parent ?? null;
 }
 
 function onHoverToken(token, hovered) {
@@ -138,27 +151,10 @@ function createPanelElement() {
   return el;
 }
 
-/**
- * Active conditions only. Prefer core appliedEffects (includes transferred
- * item effects); fall back to actor.effects for older/simple actors.
- */
-function getEffects(token) {
-  const actor = token.actor;
-  if (!actor) return [];
-  if (Array.isArray(actor.appliedEffects)) {
-    return actor.appliedEffects;
-  }
-  if (typeof actor.allApplicableEffects === "function") {
-    return [...actor.allApplicableEffects()].filter((e) => !e.disabled && !e.isSuppressed);
-  }
-  if (!actor.effects) return [];
-  return actor.effects.contents.filter((e) => !e.disabled && !e.isSuppressed);
-}
-
 function renderContent(entry) {
   const { token, el } = entry;
-  const effects = getEffects(token);
-  const rows = effects.map(effectRowHTML).join("");
+  const conditions = listDisplayConditions(token.actor, { activeOnly: true });
+  const rows = conditions.map(conditionRowHTML).join("");
   el.innerHTML = `
     <div class="ldm-header">
       <img class="ldm-token-img" src="${escapeHTML(token.document.texture?.src ?? token.actor?.img ?? "")}" alt="" />
@@ -170,16 +166,15 @@ function renderContent(entry) {
   `;
 }
 
-function effectRowHTML(effect) {
-  const duration = getDurationLabel(effect);
-  const description = getDescriptionHTML(effect);
-  const appliedBy = getAppliedByLabel(effect);
+function conditionRowHTML(condition) {
+  // DisplayCondition DTOs always provide string fields for img/description.
+  const { duration, description, appliedBy, img, name } = condition;
   return `
     <div class="ldm-effect">
-      <img class="ldm-effect-icon" src="${escapeHTML(effect.img ?? "")}" alt="" />
+      <img class="ldm-effect-icon" src="${escapeHTML(img)}" alt="" />
       <div class="ldm-effect-body">
         <div class="ldm-effect-title-row">
-          <span class="ldm-effect-name">${escapeHTML(effect.name)}</span>
+          <span class="ldm-effect-name">${escapeHTML(name)}</span>
           ${duration ? `<span class="ldm-effect-duration">${escapeHTML(duration)}</span>` : ""}
         </div>
         ${appliedBy ? `<div class="ldm-effect-applied-by">${escapeHTML(game.i18n.localize("LDMARKD.Panel.AppliedBy"))}: ${escapeHTML(appliedBy)}</div>` : ""}
@@ -187,34 +182,6 @@ function effectRowHTML(effect) {
       </div>
     </div>
   `;
-}
-
-function getDurationLabel(effect) {
-  try {
-    const d = effect.duration;
-    const label = d?.label;
-    if (!label) return null;
-    // Indefinite effects often surface as "None" / infinite remaining — omit badge.
-    if (d.remaining === Infinity || d.seconds === Infinity) return null;
-    if (/^(none|n\/a|—|-)$/i.test(String(label).trim())) return null;
-    return label;
-  } catch (err) {
-    return null;
-  }
-}
-
-function getDescriptionHTML(effect) {
-  return effect.description ?? "";
-}
-
-function getAppliedByLabel(effect) {
-  if (!effect.origin) return null;
-  try {
-    const origin = fromUuidSync(effect.origin);
-    return origin?.name ?? null;
-  } catch (err) {
-    return null;
-  }
 }
 
 function escapeHTML(str) {

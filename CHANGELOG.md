@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.4 — 2026-08-10
+
+- **PF2e fix:** conditions are Item documents (`actor.conditions`), not core
+  Active Effects. The player panel and GM Hub now list PF2e conditions and
+  token-icon effect items, so applied statuses (e.g. Blinded) show in the
+  list instead of "No active conditions" while icons already appeared on the
+  token. Add/remove/edit use PF2e's condition APIs; Item create/update/delete
+  hooks keep the UI in sync. Core Active Effect systems (dnd5e, etc.) are
+  unchanged.
+
 ## 1.3.3 — 2026-08-10
 
 - Player hover/target panels now only open for NPC/monster tokens

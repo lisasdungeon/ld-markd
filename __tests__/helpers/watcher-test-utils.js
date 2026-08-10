@@ -49,6 +49,8 @@ export function setupWatcher() {
 
   global.game = {
     userId: "user1",
+    system: { id: "dnd5e" },
+    user: { isGM: true },
     i18n: { localize: jest.fn((key) => key) },
     settings: { get: jest.fn(() => true) }
   };

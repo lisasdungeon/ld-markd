@@ -96,6 +96,10 @@ export function registerGMHubHooks() {
   Hooks.on("createActiveEffect", refresh);
   Hooks.on("updateActiveEffect", refresh);
   Hooks.on("deleteActiveEffect", refresh);
+  // PF2e conditions are Items — keep the Hub in sync when they change.
+  Hooks.on("createItem", refresh);
+  Hooks.on("updateItem", refresh);
+  Hooks.on("deleteItem", refresh);
   Hooks.on("canvasReady", refresh);
 }
 

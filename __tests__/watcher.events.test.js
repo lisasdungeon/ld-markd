@@ -15,6 +15,9 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       "updateActiveEffect",
       "createActiveEffect",
       "deleteActiveEffect",
+      "createItem",
+      "updateItem",
+      "deleteItem",
       "updateActor",
       "updateCombat",
       "deleteToken",
@@ -248,6 +251,34 @@ describe("watcher.js — hooks and panel lifecycle", () => {
 
     it("ignores effect changes with no parent actor", () => {
       expect(() => handlers.updateActiveEffect({ parent: undefined })).not.toThrow();
+    });
+
+    it("refreshes a panel when a PF2e-style condition item is created on the actor", () => {
+      const actor = makeActor({ effects: { contents: [] } });
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+
+      // Simulate the actor gaining a displayable condition via Item hooks:
+      // listDisplayConditions for non-pf2e still reads effects; swap in AE data.
+      actor.effects = { contents: [makeEffect({ name: "Blinded" })] };
+      handlers.createItem({ actor, type: "condition" });
+      expect(panel.innerHTML).toContain("Blinded");
+    });
+
+    it("resolves an item parent actor via item.parent", () => {
+      const actor = makeActor({ effects: { contents: [] } });
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      actor.effects = { contents: [makeEffect({ name: "Grabbed" })] };
+      handlers.updateItem({ parent: actor, type: "condition" });
+      expect(document.querySelector(".ld-markd-panel").innerHTML).toContain("Grabbed");
+    });
+
+    it("ignores item hooks with no resolvable actor", () => {
+      expect(() => handlers.deleteItem(null)).not.toThrow();
+      expect(() => handlers.deleteItem({})).not.toThrow();
+      expect(() => handlers.deleteItem({ parent: { documentName: "Actor" } })).not.toThrow();
     });
 
     it("ignores effect changes for actors with no visible panel", () => {

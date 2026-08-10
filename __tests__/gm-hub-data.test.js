@@ -23,8 +23,13 @@ function makeEffect(overrides = {}) {
 
 describe("gm-hub-data.js", () => {
   beforeEach(() => {
-    global.game = { i18n: { localize: jest.fn((key) => key) } };
+    global.game = {
+      system: { id: "dnd5e" },
+      i18n: { localize: jest.fn((key) => key) },
+      user: { isGM: true }
+    };
     global.CONFIG = { statusEffects: [] };
+    global.fromUuidSync = jest.fn();
   });
 
   describe("getSceneMobs", () => {
@@ -99,6 +104,19 @@ describe("gm-hub-data.js", () => {
       expect(getSceneMobs()[0].conditions.map((c) => c.id)).toEqual(["xfer"]);
     });
 
+    it("lists PF2e condition items in the hub", () => {
+      global.game.system = { id: "pf2e" };
+      const actor = makeActor({ effects: undefined });
+      actor.conditions = {
+        active: [{ id: "c1", name: "Blinded", img: "b.webp", active: true }]
+      };
+      actor.itemTypes = { effect: [] };
+      global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
+      expect(getSceneMobs()[0].conditions).toEqual([
+        { id: "c1", name: "Blinded", img: "b.webp", disabled: false, duration: null }
+      ]);
+    });
+
     it("omits indefinite duration labels (infinite remaining or seconds)", () => {
       const byRemaining = makeEffect({ id: "r", duration: { label: "forever", remaining: Infinity } });
       const bySeconds = makeEffect({ id: "s", duration: { label: "forever", seconds: Infinity } });
@@ -108,9 +126,7 @@ describe("gm-hub-data.js", () => {
       expect(getSceneMobs()[0].conditions.every((c) => c.duration === null)).toBe(true);
     });
 
-    it("returns no conditions when listApplicableEffects receives a nullish actor path", () => {
-      // Actor object is truthy for the scene filter, but effects path is empty and
-      // allApplicableEffects is missing — covers the effects-collection fallback.
+    it("returns no conditions when the actor has no effects collection", () => {
       const actor = makeActor({ effects: null });
       global.canvas = { tokens: { placeables: [makeToken({ actor })] } };
       expect(getSceneMobs()[0].conditions).toEqual([]);

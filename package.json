@@ -1,6 +1,6 @@
 {
   "name": "ld-markd",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Lets players see the conditions/effects applied to NPCs and monsters on hover or target, plus a GM Hub for viewing and editing NPC conditions.",
   "type": "module",
   "main": "scripts/main.js",
