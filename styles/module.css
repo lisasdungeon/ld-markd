@@ -7,6 +7,7 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 8px;
+  /* Dock itself ignores hits; children re-enable pointer events. */
   pointer-events: none;
 }
 
@@ -21,7 +22,8 @@
   font-family: var(--font-primary, "Signika", sans-serif);
   font-size: 13px;
   padding: 8px;
-  pointer-events: none;
+  /* Allow scrollbar + drag interaction. */
+  pointer-events: auto;
 }
 
 .ld-markd-panel.ldm-floating {
@@ -29,8 +31,15 @@
 }
 
 .ld-markd-panel.ldm-pinned {
+  position: fixed;
   border-color: #c9a94a;
   box-shadow: 0 0 14px rgba(201, 169, 74, 0.4);
+}
+
+.ld-markd-panel.ldm-dragging {
+  opacity: 0.92;
+  box-shadow: 0 0 18px rgba(201, 169, 74, 0.65);
+  cursor: grabbing;
 }
 
 .ld-markd-panel .ldm-header {
@@ -42,12 +51,22 @@
   border-bottom: 1px solid rgba(166, 138, 74, 0.5);
 }
 
+.ld-markd-panel.ldm-pinned .ldm-header {
+  cursor: grab;
+  user-select: none;
+}
+
+.ld-markd-panel.ldm-dragging .ldm-header {
+  cursor: grabbing;
+}
+
 .ld-markd-panel .ldm-token-img {
   width: 24px;
   height: 24px;
   border-radius: 4px;
   object-fit: cover;
   border: 1px solid #a68a4a;
+  pointer-events: none;
 }
 
 .ld-markd-panel .ldm-token-name {
@@ -62,6 +81,8 @@
   gap: 6px;
   max-height: 340px;
   overflow-y: auto;
+  /* Keep wheel/scrollbar usable without the panel eating canvas drags oddly. */
+  overscroll-behavior: contain;
 }
 
 .ld-markd-panel .ldm-empty {

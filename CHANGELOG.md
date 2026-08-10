@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.5 — 2026-08-10
+
+- Hover panels stay open long enough to move the pointer onto them, and
+  remain open while the pointer is over the panel so long descriptions can
+  be scrolled without the popup vanishing.
+- Targeted (pinned) panels can be dragged by their header to anywhere on
+  the screen; untarging resets them to the default top-right dock stack.
+- Panels accept pointer events (scrollbar + drag); the dock shell does not
+  block the canvas.
+
 ## 1.3.4 — 2026-08-10
 
 - **PF2e fix:** conditions are Item documents (`actor.conditions`), not core

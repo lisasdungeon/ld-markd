@@ -7,13 +7,20 @@ import { listDisplayConditions } from "./condition-data.js";
  * @property {Token} token
  * @property {boolean} hovered
  * @property {boolean} pinned
+ * @property {boolean} panelHover  Pointer is over the panel (keeps hover-panels open for scrolling).
+ * @property {{ left: number, top: number }|null} userPos  User drag position for pinned panels.
  */
 
 /** @type {Map<string, PanelEntry>} */
 const entries = new Map();
+/** @type {Map<string, ReturnType<typeof setTimeout>>} */
+const hideTimers = new Map();
 let tickerAttached = false;
+/** @type {{ entry: PanelEntry, offsetX: number, offsetY: number }|null} */
+let dragState = null;
 
 const DOCK_ID = "ld-markd-dock";
+const HOVER_GRACE_MS = 250;
 
 export function initConditionWatch() {
   Hooks.on("hoverToken", onHoverToken);
@@ -21,7 +28,6 @@ export function initConditionWatch() {
   Hooks.on("updateActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
   Hooks.on("createActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
   Hooks.on("deleteActiveEffect", (effect) => refreshActor(actorFromEffectParent(effect)));
-  // PF2e (and similar) store conditions as Items — refresh when those change.
   Hooks.on("createItem", (item) => refreshActor(actorFromItem(item)));
   Hooks.on("updateItem", (item) => refreshActor(actorFromItem(item)));
   Hooks.on("deleteItem", (item) => refreshActor(actorFromItem(item)));
@@ -33,15 +39,10 @@ export function initConditionWatch() {
   });
 }
 
-/** NPC/monster proxy: any actor with no player owner (system-agnostic). */
 function isNpcToken(token) {
   return Boolean(token?.actor) && token.actor.hasPlayerOwner === false;
 }
 
-/**
- * ActiveEffect hooks fire with parent = Actor or Item. Resolve to the Actor
- * so transferred item-effects still refresh open panels.
- */
 function actorFromEffectParent(effect) {
   const parent = effect?.parent;
   if (!parent) return null;
@@ -50,7 +51,6 @@ function actorFromEffectParent(effect) {
   return parent;
 }
 
-/** Item hooks: parent is the Actor for embedded items. */
 function actorFromItem(item) {
   if (!item) return null;
   if (item.actor) return item.actor;
@@ -60,28 +60,55 @@ function actorFromItem(item) {
 
 function onHoverToken(token, hovered) {
   if (!isNpcToken(token)) return;
-  if (hovered && !isModuleEnabled()) return;
-  setEntryState(token, { hovered });
+  if (hovered) {
+    if (!isModuleEnabled()) return;
+    clearHideTimer(token.id);
+    setEntryState(token, { hovered: true });
+    return;
+  }
+  // Grace period so the pointer can move from the token onto the panel
+  // (e.g. to use the description scrollbar) without the panel vanishing.
+  clearHideTimer(token.id);
+  hideTimers.set(
+    token.id,
+    setTimeout(() => {
+      hideTimers.delete(token.id);
+      setEntryState(token, { hovered: false });
+    }, HOVER_GRACE_MS)
+  );
 }
 
 function onTargetToken(user, token, targeted) {
   if (user.id !== game.userId) return;
   if (!isNpcToken(token)) return;
   if (targeted && !isModuleEnabled()) return;
+  if (!targeted) {
+    const entry = entries.get(token.id);
+    if (entry) entry.userPos = null;
+  }
   setEntryState(token, { pinned: targeted });
+}
+
+function clearHideTimer(tokenId) {
+  const timer = hideTimers.get(tokenId);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    hideTimers.delete(tokenId);
+  }
 }
 
 function setEntryState(token, patch) {
   let entry = entries.get(token.id);
   if (!entry) {
-    entry = { el: null, token, hovered: false, pinned: false };
+    entry = { el: null, token, hovered: false, pinned: false, panelHover: false, userPos: null };
     entries.set(token.id, entry);
   }
   Object.assign(entry, patch);
 
-  const shouldShow = entry.hovered || entry.pinned;
+  const shouldShow = entry.hovered || entry.pinned || entry.panelHover;
   if (shouldShow) {
-    if (!entry.el) entry.el = createPanelElement();
+    if (!entry.el) entry.el = createPanelElement(entry);
+    entry.el.dataset.tokenId = token.id;
     renderContent(entry);
     placePanel(entry);
     entry.el.classList.toggle("ldm-pinned", entry.pinned);
@@ -92,20 +119,28 @@ function setEntryState(token, patch) {
 }
 
 /**
- * Targeted (pinned) tokens dock a fixed panel in the top-right corner of
- * the screen, out of the way of the token itself. Hover-only tokens float
- * a panel next to the token and track it every frame.
+ * Targeted panels default to the top-right dock, or a user-dragged fixed
+ * position. Hover-only panels float next to the token each frame.
  */
 function placePanel(entry) {
-  const { el, pinned } = entry;
+  const { el, pinned, userPos } = entry;
   if (pinned) {
     el.classList.remove("ldm-floating");
-    el.style.left = "";
-    el.style.top = "";
-    const dock = getDockContainer();
-    if (el.parentElement !== dock) dock.appendChild(el);
+    if (userPos) {
+      if (el.parentElement !== document.body) document.body.appendChild(el);
+      el.style.left = `${userPos.left}px`;
+      el.style.top = `${userPos.top}px`;
+      el.style.right = "auto";
+    } else {
+      el.style.left = "";
+      el.style.top = "";
+      el.style.right = "";
+      const dock = getDockContainer();
+      if (el.parentElement !== dock) dock.appendChild(el);
+    }
   } else {
     el.classList.add("ldm-floating");
+    el.style.right = "";
     if (el.parentElement !== document.body) document.body.appendChild(el);
     positionPanel(entry);
     ensureTicker();
@@ -123,15 +158,19 @@ function getDockContainer() {
 }
 
 function removeEntry(tokenId) {
+  clearHideTimer(tokenId);
   const entry = entries.get(tokenId);
   if (!entry) return;
   entry.el?.remove();
+  entry.el = null;
   entries.delete(tokenId);
 }
 
 function clearAll() {
+  for (const id of [...hideTimers.keys()]) clearHideTimer(id);
   for (const entry of entries.values()) entry.el?.remove();
   entries.clear();
+  endDrag();
 }
 
 function refreshActor(actor) {
@@ -145,10 +184,75 @@ function refreshAllContent() {
   for (const entry of entries.values()) renderContent(entry);
 }
 
-function createPanelElement() {
+function createPanelElement(entry) {
   const el = document.createElement("div");
   el.classList.add("ld-markd-panel");
+  el.addEventListener("pointerenter", () => onPanelEnter(entry));
+  el.addEventListener("pointerleave", () => onPanelLeave(entry));
+  el.addEventListener("pointerdown", (ev) => onPanelPointerDown(ev, entry));
   return el;
+}
+
+function onPanelEnter(entry) {
+  const live = entries.get(entry.token.id);
+  if (!live) return;
+  clearHideTimer(live.token.id);
+  live.panelHover = true;
+}
+
+function onPanelLeave(entry) {
+  const live = entries.get(entry.token.id);
+  if (!live) return;
+  live.panelHover = false;
+  if (!live.hovered && !live.pinned) {
+    setEntryState(live.token, { panelHover: false });
+  }
+}
+
+function onPanelPointerDown(ev, entry) {
+  const live = entries.get(entry.token.id);
+  if (!live?.pinned || !live.el) return;
+  if (!ev.target.closest(".ldm-header")) return;
+  if (ev.button !== 0) return;
+
+  const rect = live.el.getBoundingClientRect();
+  // Lift out of the dock into free fixed positioning at the current place.
+  if (!live.userPos) {
+    live.userPos = { left: rect.left, top: rect.top };
+    placePanel(live);
+  }
+
+  dragState = {
+    entry: live,
+    offsetX: ev.clientX - rect.left,
+    offsetY: ev.clientY - rect.top
+  };
+  live.el.classList.add("ldm-dragging");
+  ev.preventDefault();
+
+  window.addEventListener("pointermove", onDragMove);
+  window.addEventListener("pointerup", onDragEnd, { once: true });
+}
+
+function onDragMove(ev) {
+  const state = dragState;
+  if (!state?.entry?.el) return;
+  const { entry, offsetX, offsetY } = state;
+  const left = Math.max(4, Math.min(window.innerWidth - 40, ev.clientX - offsetX));
+  const top = Math.max(4, Math.min(window.innerHeight - 40, ev.clientY - offsetY));
+  entry.userPos = { left, top };
+  entry.el.style.left = `${left}px`;
+  entry.el.style.top = `${top}px`;
+}
+
+function onDragEnd() {
+  endDrag();
+}
+
+function endDrag() {
+  if (dragState?.entry?.el) dragState.entry.el.classList.remove("ldm-dragging");
+  dragState = null;
+  window.removeEventListener("pointermove", onDragMove);
 }
 
 function renderContent(entry) {
@@ -156,7 +260,7 @@ function renderContent(entry) {
   const conditions = listDisplayConditions(token.actor, { activeOnly: true });
   const rows = conditions.map(conditionRowHTML).join("");
   el.innerHTML = `
-    <div class="ldm-header">
+    <div class="ldm-header" title="${escapeHTML(game.i18n.localize("LDMARKD.Panel.DragHint"))}">
       <img class="ldm-token-img" src="${escapeHTML(token.document.texture?.src ?? token.actor?.img ?? "")}" alt="" />
       <span class="ldm-token-name">${escapeHTML(token.document.name)}</span>
     </div>
@@ -167,7 +271,6 @@ function renderContent(entry) {
 }
 
 function conditionRowHTML(condition) {
-  // DisplayCondition DTOs always provide string fields for img/description.
   const { duration, description, appliedBy, img, name } = condition;
   return `
     <div class="ldm-effect">
@@ -234,6 +337,8 @@ function ensureTicker() {
 
 /** Resets module-level state between test runs. Not used at runtime. */
 export function _resetForTests() {
+  for (const id of [...hideTimers.keys()]) clearHideTimer(id);
+  endDrag();
   entries.clear();
   tickerAttached = false;
 }

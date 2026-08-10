@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { makeToken, makeActor, makeEffect, setupWatcher } from "./helpers/watcher-test-utils.js";
+import { makeToken, makeActor, makeEffect, setupWatcher, flushHoverGrace } from "./helpers/watcher-test-utils.js";
 
 describe("watcher.js — panel content, positioning, and the ticker", () => {
   let handlers;
@@ -170,6 +170,7 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
         handlers.hoverToken(makeToken({ actor }), true);
         expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
         handlers.hoverToken(makeToken({ actor }), false);
+        flushHoverGrace();
       }
     });
 
@@ -253,6 +254,7 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       const tick = global.canvas.app.ticker.add.mock.calls[0][0];
 
       handlers.hoverToken(token, false);
+      flushHoverGrace();
       tick();
       expect(global.canvas.app.ticker.remove).toHaveBeenCalledWith(tick);
 

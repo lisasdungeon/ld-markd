@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
-import { makeToken, makeActor, makeEffect, setupWatcher } from "./helpers/watcher-test-utils.js";
+import { makeToken, makeActor, makeEffect, setupWatcher, flushHoverGrace } from "./helpers/watcher-test-utils.js";
+import { _resetForTests } from "../scripts/watcher.js";
 
 describe("watcher.js — hooks and panel lifecycle", () => {
   let handlers;
@@ -57,14 +58,30 @@ describe("watcher.js — hooks and panel lifecycle", () => {
     it("hovering out a never-shown token is a no-op", () => {
       const actor = makeActor();
       handlers.hoverToken(makeToken({ actor }), false);
+      flushHoverGrace();
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
 
-    it("hides the panel on hover-out", () => {
+    it("hides the panel on hover-out after the grace period", () => {
       const actor = makeActor();
       const token = makeToken({ actor });
       handlers.hoverToken(token, true);
       handlers.hoverToken(token, false);
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+      flushHoverGrace();
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
+    it("keeps the panel open while the pointer is over it after token hover-out", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.dispatchEvent(new Event("pointerenter"));
+      handlers.hoverToken(token, false);
+      flushHoverGrace();
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+      panel.dispatchEvent(new Event("pointerleave"));
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
   });
@@ -163,6 +180,110 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       expect(panel.parentElement).toBe(dock);
     });
 
+    it("lets a pinned panel be dragged by its header to a free position", () => {
+      const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.getBoundingClientRect = () => ({ left: 800, top: 60, right: 1000, bottom: 200, width: 200, height: 140 });
+
+      const header = panel.querySelector(".ldm-header");
+      header.dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 820, clientY: 70, bubbles: true })
+      );
+      expect(panel.classList.contains("ldm-dragging")).toBe(true);
+      expect(panel.parentElement).toBe(document.body);
+
+      window.dispatchEvent(new MouseEvent("pointermove", { clientX: 420, clientY: 220 }));
+      expect(panel.style.left).toBe("400px");
+      expect(panel.style.top).toBe("210px");
+
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+      expect(panel.classList.contains("ldm-dragging")).toBe(false);
+      // Still free-positioned after drag ends
+      expect(panel.parentElement).toBe(document.body);
+      expect(panel.style.left).toBe("400px");
+
+      // Second drag reuses existing userPos (no dock lift path)
+      panel.getBoundingClientRect = () => ({ left: 400, top: 210, right: 600, bottom: 350, width: 200, height: 140 });
+      header.dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 410, clientY: 220, bubbles: true })
+      );
+      window.dispatchEvent(new MouseEvent("pointermove", { clientX: 310, clientY: 320 }));
+      expect(panel.style.left).toBe("300px");
+      expect(panel.style.top).toBe("310px");
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+
+      // Re-render while free-positioned (already on document.body)
+      handlers.hoverToken(makeToken({ actor }), true);
+      expect(panel.parentElement).toBe(document.body);
+      expect(panel.style.left).toBe("300px");
+    });
+
+    it("keeps the panel when leaving it while the token is still hovered", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.dispatchEvent(new Event("pointerenter"));
+      panel.dispatchEvent(new Event("pointerleave"));
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("ignores un-target when the token was never tracked", () => {
+      const actor = makeActor();
+      expect(() => handlers.targetToken({ id: "user1" }, makeToken({ actor }), false)).not.toThrow();
+    });
+
+    it("ignores panel pointer events after the entry has been removed", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      handlers.deleteToken({ id: token.id });
+      expect(() => {
+        panel.dispatchEvent(new Event("pointerenter"));
+        panel.dispatchEvent(new Event("pointerleave"));
+      }).not.toThrow();
+    });
+
+    it("aborts an in-progress drag if the panel entry is removed", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.targetToken({ id: "user1" }, token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.getBoundingClientRect = () => ({ left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 });
+      panel.querySelector(".ldm-header").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 110, clientY: 110, bubbles: true })
+      );
+      handlers.deleteToken({ id: token.id });
+      expect(() => window.dispatchEvent(new MouseEvent("pointermove", { clientX: 200, clientY: 200 }))).not.toThrow();
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+    });
+
+    it("ignores drag starts that are not on the header or not left-button", () => {
+      const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.querySelector(".ldm-effects").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 10, clientY: 10, bubbles: true })
+      );
+      expect(panel.classList.contains("ldm-dragging")).toBe(false);
+      panel.querySelector(".ldm-header").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 2, clientX: 10, clientY: 10, bubbles: true })
+      );
+      expect(panel.classList.contains("ldm-dragging")).toBe(false);
+    });
+
+    it("does not start a drag on a hover-only (unpinned) panel", () => {
+      const actor = makeActor();
+      handlers.hoverToken(makeToken({ actor }), true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.querySelector(".ldm-header").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 10, clientY: 10, bubbles: true })
+      );
+      expect(panel.classList.contains("ldm-dragging")).toBe(false);
+    });
+
     it("moves a panel back to floating near the token when un-targeted while still hovered", () => {
       const actor = makeActor();
       const token = makeToken({ actor });
@@ -201,6 +322,50 @@ describe("watcher.js — hooks and panel lifecycle", () => {
 
       handlers["ldMarkd.enabledChanged"](false);
       expect(document.querySelectorAll(".ld-markd-panel")).toHaveLength(0);
+    });
+
+    it("clears pending hover-hide timers when the module is disabled", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      handlers.hoverToken(token, false); // schedules grace timer
+      handlers["ldMarkd.enabledChanged"](false);
+      flushHoverGrace();
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
+    it("clears pending hide timers on test reset without re-firing hide", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      handlers.hoverToken(token, false);
+      _resetForTests();
+      // Timer was cleared — advancing time must not throw or resurrect state.
+      expect(() => flushHoverGrace()).not.toThrow();
+    });
+
+    it("cancels a pending hover-hide when the token is hovered again", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      handlers.hoverToken(token, false);
+      handlers.hoverToken(token, true);
+      flushHoverGrace();
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("resets a dragged pinned panel when un-targeted", () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.targetToken({ id: "user1" }, token, true);
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.getBoundingClientRect = () => ({ left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 });
+      panel.querySelector(".ldm-header").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 110, clientY: 110, bubbles: true })
+      );
+      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+      handlers.targetToken({ id: "user1" }, token, false);
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
 
     it("does nothing when re-enabled", () => {

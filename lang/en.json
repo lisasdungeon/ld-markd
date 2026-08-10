@@ -9,6 +9,7 @@
   "LDMARKD.Notify.Disabled": "Condition Watch: hidden from players again.",
   "LDMARKD.Panel.NoConditions": "No active conditions",
   "LDMARKD.Panel.AppliedBy": "Applied by",
+  "LDMARKD.Panel.DragHint": "Drag header to move",
   "LDMARKD.Hub.Title": "LD Markd — GM Hub",
   "LDMARKD.Hub.NoMobs": "No NPCs or monsters on this scene.",
   "LDMARKD.Hub.NoConditions": "No active conditions",

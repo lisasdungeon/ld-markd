@@ -31,12 +31,18 @@ export function makeEffect(overrides = {}) {
   };
 }
 
+/** Advance past the hover grace period so panels dismiss after hover-out. */
+export function flushHoverGrace() {
+  jest.advanceTimersByTime(300);
+}
+
 /**
  * Resets watcher.js module state, installs fresh Foundry global mocks, and
  * re-registers the watcher's hooks, capturing each handler by event name.
  * Call from beforeEach; returns the handlers object.
  */
 export function setupWatcher() {
+  jest.useFakeTimers();
   _resetForTests();
   document.body.innerHTML = "";
 
