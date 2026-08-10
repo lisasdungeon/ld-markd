@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { makeToken, makeActor, makeEffect, setupWatcher, flushHoverGrace } from "./helpers/watcher-test-utils.js";
+import { makeToken, makeActor, makeEffect, setupWatcher, flushHoverGrace, flushPanelRender } from "./helpers/watcher-test-utils.js";
 
 describe("watcher.js — panel content, positioning, and the ticker", () => {
   let handlers;
@@ -9,31 +9,36 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
   });
 
   describe("panel content", () => {
-    it("falls back from token texture to actor image", () => {
+    it("falls back from token texture to actor image", async () => {
       const actor = makeActor({ img: "actor.webp" });
       handlers.hoverToken(makeToken({ actor, texture: { src: "token.webp" } }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ldm-token-img").getAttribute("src")).toBe("token.webp");
 
       handlers.hoverToken(makeToken({ id: "tok2", actor, texture: undefined }), true);
+      await flushPanelRender();
       expect(document.querySelectorAll(".ldm-token-img")[1].getAttribute("src")).toBe("actor.webp");
     });
 
-    it("falls back to an empty src when neither a texture nor an actor are available", () => {
+    it("falls back to an empty src when neither a texture nor an actor are available", async () => {
       const actor = makeActor({ img: "placeholder.webp" });
       const token = makeToken({ actor, texture: undefined });
       handlers.hoverToken(token, true);
+      await flushPanelRender();
       token.actor = null;
       handlers.updateCombat();
+      await flushPanelRender();
       expect(document.querySelector(".ldm-token-img").getAttribute("src")).toBe("");
     });
 
-    it("escapes a null token name safely", () => {
+    it("escapes a null token name safely", async () => {
       const actor = makeActor();
       handlers.hoverToken(makeToken({ actor, name: null }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ldm-token-name").textContent).toBe("");
     });
 
-    it("filters out disabled and suppressed effects", () => {
+    it("filters out disabled and suppressed effects", async () => {
       const actor = makeActor({
         effects: {
           contents: [
@@ -44,24 +49,26 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
         }
       });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const panel = document.querySelector(".ld-markd-panel");
       expect(panel.innerHTML).toContain("Visible");
       expect(panel.innerHTML).not.toContain("Disabled");
       expect(panel.innerHTML).not.toContain("Suppressed");
     });
 
-    it("uses allApplicableEffects when present (includes transferred item effects)", () => {
+    it("uses allApplicableEffects when present (includes transferred item effects)", async () => {
       const actor = makeActor({ effects: { contents: [makeEffect({ name: "OnActorOnly" })] } });
       actor.allApplicableEffects = function* () {
         yield makeEffect({ name: "Transferred", disabled: false, isSuppressed: false });
       };
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).toContain("Transferred");
       expect(html).not.toContain("OnActorOnly");
     });
 
-    it("shows PF2e conditions from actor.conditions", () => {
+    it("shows PF2e conditions from actor.conditions", async () => {
       global.game.system = { id: "pf2e" };
       const actor = makeActor({ effects: undefined });
       actor.conditions = {
@@ -69,10 +76,11 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       };
       actor.itemTypes = { effect: [] };
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).toContain("Blinded");
     });
 
-    it("renders duration, applied-by, and description from display conditions", () => {
+    it("renders duration, applied-by, and description from display conditions", async () => {
       global.game.system = { id: "pf2e" };
       const actor = makeActor({ effects: undefined });
       actor.conditions = {
@@ -90,13 +98,14 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       };
       actor.itemTypes = { effect: [] };
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).toContain("ldm-effect-duration");
       expect(html).toContain("Plague");
       expect(html).toContain("<p>Sick.</p>");
     });
 
-    it("renders a condition row without optional duration/applied-by/description", () => {
+    it("renders a condition row without optional duration/applied-by/description", async () => {
       global.game.system = { id: "pf2e" };
       const actor = makeActor({ effects: undefined });
       actor.conditions = {
@@ -104,6 +113,7 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       };
       actor.itemTypes = { effect: [] };
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).toContain("Prone");
       expect(html).not.toContain("ldm-effect-duration");
@@ -111,20 +121,22 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(html).not.toContain("ldm-effect-description");
     });
 
-    it("falls back to an empty icon src when the effect has no image", () => {
+    it("falls back to an empty icon src when the effect has no image", async () => {
       const effect = makeEffect({ img: undefined });
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ldm-effect-icon").getAttribute("src")).toBe("");
     });
 
-    it("handles an actor with no effects collection at all", () => {
+    it("handles an actor with no effects collection at all", async () => {
       const actor = makeActor({ effects: undefined });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).toContain("LDMARKD.Panel.NoConditions");
     });
 
-    it("renders duration, applied-by, and description when present", () => {
+    it("renders duration, applied-by, and description when present", async () => {
       global.fromUuidSync = jest.fn(() => ({ name: "Bastard Sword" }));
       const effect = makeEffect({
         name: "Clumsy 1",
@@ -134,30 +146,33 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       });
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).toContain("1 Round");
       expect(html).toContain("Bastard Sword");
       expect(html).toContain("<p>Clumsy movements.</p>");
     });
 
-    it("omits duration, applied-by, and description when absent", () => {
+    it("omits duration, applied-by, and description when absent", async () => {
       const effect = makeEffect({ duration: undefined, origin: undefined, description: undefined });
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const html = document.querySelector(".ld-markd-panel").innerHTML;
       expect(html).not.toContain("ldm-effect-duration");
       expect(html).not.toContain("ldm-effect-applied-by");
       expect(html).not.toContain("ldm-effect-description");
     });
 
-    it("treats a duration with an empty label as no duration", () => {
+    it("treats a duration with an empty label as no duration", async () => {
       const effect = makeEffect({ duration: { label: "" } });
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
     });
 
-    it("omits indefinite duration badges (None / infinite remaining / infinite seconds)", () => {
+    it("omits indefinite duration badges (None / infinite remaining / infinite seconds)", async () => {
       for (const duration of [
         { label: "None" },
         { label: "forever", remaining: Infinity },
@@ -168,13 +183,14 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
         document.body.innerHTML = "";
         const actor = makeActor({ effects: { contents: [makeEffect({ duration })] } });
         handlers.hoverToken(makeToken({ actor }), true);
+        await flushPanelRender();
         expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
         handlers.hoverToken(makeToken({ actor }), false);
         flushHoverGrace();
       }
     });
 
-    it("swallows an error thrown while reading effect.duration", () => {
+    it("swallows an error thrown while reading effect.duration", async () => {
       const effect = makeEffect();
       Object.defineProperty(effect, "duration", {
         get() {
@@ -183,63 +199,72 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       });
       const actor = makeActor({ effects: { contents: [effect] } });
       expect(() => handlers.hoverToken(makeToken({ actor }), true)).not.toThrow();
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-duration");
     });
 
-    it("treats an unresolvable origin as no applied-by label", () => {
+    it("treats an unresolvable origin as no applied-by label", async () => {
       global.fromUuidSync = jest.fn(() => null);
       const effect = makeEffect({ origin: "Item.missing" });
       const actor = makeActor({ effects: { contents: [effect] } });
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-applied-by");
     });
 
-    it("swallows an error thrown while resolving the origin uuid", () => {
+    it("swallows an error thrown while resolving the origin uuid", async () => {
       global.fromUuidSync = jest.fn(() => {
         throw new Error("bad uuid");
       });
       const effect = makeEffect({ origin: "Item.bad" });
       const actor = makeActor({ effects: { contents: [effect] } });
       expect(() => handlers.hoverToken(makeToken({ actor }), true)).not.toThrow();
+      await flushPanelRender();
       expect(document.querySelector(".ld-markd-panel").innerHTML).not.toContain("ldm-effect-applied-by");
     });
   });
 
   describe("positioning", () => {
-    it("positions the panel relative to the canvas view when canvas is ready", () => {
+    it("positions the panel relative to the canvas view when canvas is ready", async () => {
       global.canvas.app.view.getBoundingClientRect = jest.fn(() => ({ left: 50, top: 20 }));
       const actor = makeActor();
       handlers.hoverToken(makeToken({ actor, x: 100, y: 200, w: 100 }), true);
+      await flushPanelRender();
       const panel = document.querySelector(".ld-markd-panel");
       expect(panel.style.left).toBe("258px");
       expect(panel.style.top).toBe("220px");
     });
 
-    it("skips positioning while the canvas is not ready", () => {
+    it("skips positioning while the canvas is not ready", async () => {
       global.canvas.ready = false;
       const actor = makeActor();
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const panel = document.querySelector(".ld-markd-panel");
       expect(panel.style.left).toBe("");
     });
 
-    it("flips the panel on-screen when it would overflow the viewport", () => {
+    it("flips the panel on-screen when it would overflow the viewport", async () => {
       const actor = makeActor();
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       const panel = document.querySelector(".ld-markd-panel");
       panel.getBoundingClientRect = () => ({ right: 5000, bottom: 5000, width: 4000, height: 4000 });
 
       handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
       expect(panel.style.left).toBe("4px");
       expect(panel.style.top).toBe("4px");
     });
   });
 
   describe("ticker", () => {
-    it("attaches the ticker once and repositions all visible panels on each tick", () => {
+    it("attaches the ticker once and repositions all visible panels on each tick", async () => {
       const actor = makeActor();
       handlers.hoverToken(makeToken({ id: "t1", actor }), true);
+      await flushPanelRender();
       handlers.hoverToken(makeToken({ id: "t2", actor }), true);
+      await flushPanelRender();
       expect(global.canvas.app.ticker.add).toHaveBeenCalledTimes(1);
 
       const tick = global.canvas.app.ticker.add.mock.calls[0][0];
@@ -247,10 +272,11 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(global.canvas.app.ticker.remove).not.toHaveBeenCalled();
     });
 
-    it("detaches the ticker once no panels remain visible", () => {
+    it("detaches the ticker once no panels remain visible", async () => {
       const actor = makeActor();
       const token = makeToken({ actor });
       handlers.hoverToken(token, true);
+      await flushPanelRender();
       const tick = global.canvas.app.ticker.add.mock.calls[0][0];
 
       handlers.hoverToken(token, false);
@@ -259,31 +285,37 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(global.canvas.app.ticker.remove).toHaveBeenCalledWith(tick);
 
       handlers.hoverToken(token, true);
+      await flushPanelRender();
       expect(global.canvas.app.ticker.add).toHaveBeenCalledTimes(2);
     });
 
-    it("never attaches the ticker for a targeted-only (docked) panel", () => {
+    it("never attaches the ticker for a targeted-only (docked) panel", async () => {
       const actor = makeActor();
       handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      await flushPanelRender();
       expect(global.canvas.app.ticker.add).not.toHaveBeenCalled();
     });
 
-    it("detaches the ticker once the only remaining panels are docked", () => {
+    it("detaches the ticker once the only remaining panels are docked", async () => {
       const actor = makeActor();
       const token = makeToken({ actor });
       handlers.hoverToken(token, true);
+      await flushPanelRender();
       const tick = global.canvas.app.ticker.add.mock.calls[0][0];
 
       handlers.targetToken({ id: "user1" }, token, true);
+      await flushPanelRender();
       tick();
       expect(global.canvas.app.ticker.remove).toHaveBeenCalledWith(tick);
     });
 
-    it("skips repositioning docked panels on tick", () => {
+    it("skips repositioning docked panels on tick", async () => {
       const floatingActor = makeActor({ id: "floating" });
       const pinnedActor = makeActor({ id: "pinned" });
       handlers.hoverToken(makeToken({ id: "t1", actor: floatingActor }), true);
+      await flushPanelRender();
       handlers.targetToken({ id: "user1" }, makeToken({ id: "t2", actor: pinnedActor }), true);
+      await flushPanelRender();
       const tick = global.canvas.app.ticker.add.mock.calls[0][0];
 
       const dockedPanel = document.querySelector("#ld-markd-dock .ld-markd-panel");

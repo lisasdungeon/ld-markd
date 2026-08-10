@@ -1,5 +1,5 @@
 import { isModuleEnabled } from "./settings.js";
-import { listDisplayConditions } from "./condition-data.js";
+import { listDisplayConditions, enrichDescriptionHTML } from "./condition-data.js";
 
 /**
  * @typedef {object} PanelEntry
@@ -109,7 +109,7 @@ function setEntryState(token, patch) {
   if (shouldShow) {
     if (!entry.el) entry.el = createPanelElement(entry);
     entry.el.dataset.tokenId = token.id;
-    renderContent(entry);
+    void renderContent(entry);
     placePanel(entry);
     entry.el.classList.toggle("ldm-pinned", entry.pinned);
   } else {
@@ -176,12 +176,12 @@ function clearAll() {
 function refreshActor(actor) {
   if (!actor) return;
   for (const entry of entries.values()) {
-    if (entry.token.actor?.id === actor.id) renderContent(entry);
+    if (entry.token.actor?.id === actor.id) void renderContent(entry);
   }
 }
 
 function refreshAllContent() {
-  for (const entry of entries.values()) renderContent(entry);
+  for (const entry of entries.values()) void renderContent(entry);
 }
 
 function createPanelElement(entry) {
@@ -255,10 +255,21 @@ function endDrag() {
   window.removeEventListener("pointermove", onDragMove);
 }
 
-function renderContent(entry) {
+async function renderContent(entry) {
   const { token, el } = entry;
   const conditions = listDisplayConditions(token.actor, { activeOnly: true });
-  const rows = conditions.map(conditionRowHTML).join("");
+  const enriched = [];
+  for (const condition of conditions) {
+    enriched.push({
+      ...condition,
+      description: await enrichDescriptionHTML(condition.description)
+    });
+  }
+  // Entry may have been closed while we awaited enrichment.
+  const live = entries.get(token.id);
+  if (!live || live.el !== el) return;
+
+  const rows = enriched.map(conditionRowHTML).join("");
   el.innerHTML = `
     <div class="ldm-header" title="${escapeHTML(game.i18n.localize("LDMARKD.Panel.DragHint"))}">
       <img class="ldm-token-img" src="${escapeHTML(token.document.texture?.src ?? token.actor?.img ?? "")}" alt="" />

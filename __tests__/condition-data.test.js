@@ -1,5 +1,11 @@
 import { jest } from "@jest/globals";
-import { listDisplayConditions, listAvailableStatuses, isPf2e } from "../scripts/condition-data.js";
+import {
+  listDisplayConditions,
+  listAvailableStatuses,
+  isPf2e,
+  enrichDescriptionHTML,
+  stripInlineEnrichers
+} from "../scripts/condition-data.js";
 
 function makeEffect(overrides = {}) {
   return {
@@ -316,15 +322,48 @@ describe("condition-data.js", () => {
       expect(listDisplayConditions(actor)[0].duration).toBe("3 rounds");
     });
 
-    it("prefers breakdown over appliedBy for PF2e applied-by text", () => {
+    it("prefers appliedBy.name over breakdown so labels are not doubled", () => {
       global.game.system = { id: "pf2e" };
       const actor = {
         conditions: {
-          active: [{ id: "c1", name: "Grabbed", active: true, img: "", breakdown: "From: Wolf", appliedBy: { name: "X" } }]
+          active: [
+            {
+              id: "c1",
+              name: "Grabbed",
+              active: true,
+              img: "",
+              breakdown: "Applied By: Wolf",
+              appliedBy: { name: "Wolf" }
+            }
+          ]
         },
         itemTypes: { effect: [] }
       };
-      expect(listDisplayConditions(actor)[0].appliedBy).toBe("From: Wolf");
+      expect(listDisplayConditions(actor)[0].appliedBy).toBe("Wolf");
+    });
+
+    it("strips a leading label from breakdown when no appliedBy name exists", () => {
+      global.game.system = { id: "pf2e" };
+      const actor = {
+        conditions: {
+          active: [
+            { id: "c1", name: "Prone", active: true, img: "", breakdown: "Applied By: Unconscious" }
+          ]
+        },
+        itemTypes: { effect: [] }
+      };
+      expect(listDisplayConditions(actor)[0].appliedBy).toBe("Unconscious");
+    });
+
+    it("keeps breakdown when stripping would leave an empty string", () => {
+      global.game.system = { id: "pf2e" };
+      const actor = {
+        conditions: {
+          active: [{ id: "c1", name: "Prone", active: true, img: "", breakdown: "Applied By: " }]
+        },
+        itemTypes: { effect: [] }
+      };
+      expect(listDisplayConditions(actor)[0].appliedBy).toBe("Applied By: ");
     });
 
     it("swallows duration/description errors on PF2e items", () => {
@@ -494,6 +533,63 @@ describe("condition-data.js", () => {
         itemTypes: { effect: [] }
       };
       expect(listDisplayConditions(actor)[0].duration).toBeNull();
+    });
+  });
+
+  describe("enrichDescriptionHTML", () => {
+    it("strips @UUID enrichers to their brace labels without TextEditor", async () => {
+      const raw =
+        'You are @UUID[Compendium.pf2e.conditionitems.Item.AJI]{Off-Guard} and may @UUID[Compendium.pf2e.actionspf2e.Item.Tj055]{Crawl}.';
+      const out = await enrichDescriptionHTML(raw);
+      expect(out).toContain("Off-Guard");
+      expect(out).toContain("Crawl");
+      expect(out).not.toContain("@UUID");
+      expect(out).not.toContain("Compendium.pf2e");
+    });
+
+    it("uses TextEditor.enrichHTML when available", async () => {
+      globalThis.foundry = {
+        applications: {
+          ux: {
+            TextEditor: {
+              implementation: {
+                enrichHTML: jest.fn(async (html) => `<enriched>${html}</enriched>`)
+              }
+            }
+          }
+        }
+      };
+      const out = await enrichDescriptionHTML("Hello @UUID[x]{World}");
+      expect(out).toBe("<enriched>Hello @UUID[x]{World}</enriched>");
+      delete globalThis.foundry;
+    });
+
+    it("falls back to strip when enrichHTML throws", async () => {
+      globalThis.foundry = {
+        applications: {
+          ux: {
+            TextEditor: {
+              implementation: {
+                enrichHTML: jest.fn(async () => {
+                  throw new Error("boom");
+                })
+              }
+            }
+          }
+        }
+      };
+      const out = await enrichDescriptionHTML("@UUID[x]{Label}");
+      expect(out).toBe("Label");
+      delete globalThis.foundry;
+    });
+
+    it("returns empty string for empty input", async () => {
+      expect(await enrichDescriptionHTML("")).toBe("");
+      expect(await enrichDescriptionHTML(null)).toBe("");
+    });
+
+    it("stripInlineEnrichers handles bare @UUID without braces", () => {
+      expect(stripInlineEnrichers("@UUID[Compendium.pf2e.x]")).toBe("Compendium.pf2e.x");
     });
   });
 });

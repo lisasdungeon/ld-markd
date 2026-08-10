@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.6 — 2026-08-10
+
+- Condition descriptions now run through Foundry's TextEditor enrichment so
+  PF2e `@UUID[...]{Label}` / `@Check[...]` markup shows as proper names and
+  links instead of raw UUID text.
+- "Applied by" no longer doubles when PF2e already provides a breakdown
+  phrase; the granter name is used when available.
+
 ## 1.3.5 — 2026-08-10
 
 - Hover panels stay open long enough to move the pointer onto them, and

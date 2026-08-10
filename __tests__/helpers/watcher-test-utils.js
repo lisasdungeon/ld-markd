@@ -36,6 +36,12 @@ export function flushHoverGrace() {
   jest.advanceTimersByTime(300);
 }
 
+/** Flush async panel render (description enrichment). */
+export async function flushPanelRender() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 /**
  * Resets watcher.js module state, installs fresh Foundry global mocks, and
  * re-registers the watcher's hooks, capturing each handler by event name.

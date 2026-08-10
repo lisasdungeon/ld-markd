@@ -204,10 +204,53 @@ function getPf2eDescription(item) {
 
 function getPf2eAppliedBy(condition) {
   try {
-    if (condition.breakdown) return condition.breakdown;
+    // Prefer the granter name only. PF2e `breakdown` is already a full
+    // "Applied By: …" phrase and would double-label in the panel.
     const appliedBy = condition.appliedBy;
-    return appliedBy?.name ?? null;
+    if (appliedBy?.name) return appliedBy.name;
+    const breakdown = condition.breakdown;
+    if (!breakdown) return null;
+    const stripped = String(breakdown).replace(/^[^:]+:\s*/i, "").trim();
+    return stripped || breakdown;
   } catch (err) {
     return null;
   }
+}
+
+/**
+ * Resolve Foundry/PF2e inline enrichers (@UUID, @Check, …) to display HTML.
+ * Falls back to stripping enrichers to their brace labels when TextEditor
+ * is unavailable (tests / early boot).
+ * @param {string} raw
+ * @returns {Promise<string>}
+ */
+export async function enrichDescriptionHTML(raw) {
+  if (!raw) return "";
+  const editor =
+    globalThis.foundry?.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor ?? null;
+  if (typeof editor?.enrichHTML === "function") {
+    try {
+      return await editor.enrichHTML(raw, {
+        async: true,
+        secrets: false,
+        documents: true,
+        links: true,
+        rolls: true,
+        embeds: false
+      });
+    } catch (err) {
+      // fall through
+    }
+  }
+  return stripInlineEnrichers(raw);
+}
+
+/**
+ * @param {string} html
+ * @returns {string}
+ */
+export function stripInlineEnrichers(html) {
+  return String(html)
+    .replace(/@\w+\[([^\]]+)\]\{([^}]+)\}/g, "$2")
+    .replace(/@\w+\[([^\]]+)\]/g, "$1");
 }
