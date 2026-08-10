@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.2 — 2026-08-10
+## 1.3.3 — 2026-08-10
 
 - Player hover/target panels now only open for NPC/monster tokens
   (`actor.hasPlayerOwner === false`), matching the module description and
