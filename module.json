@@ -1,8 +1,8 @@
 {
   "id": "ld-markd",
   "title": "LD Markd",
-  "description": "Lets players see the conditions/effects applied to NPCs and monsters — icon, description, and remaining duration — on hover or target. Includes a GM Hub for viewing and editing NPC conditions, a scene control toggle, and a settings option to show/hide that toggle.",
-  "version": "1.3.7",
+  "description": "Lets players see the conditions/effects applied to NPCs, monsters, and party members — icon, description, and remaining duration — on hover or target. Each panel has a close button. Includes a GM Hub for viewing and editing NPC conditions, a scene control toggle, and a settings option to show/hide that toggle.",
+  "version": "1.4.0",
   "authors": [
     {
       "name": "Lisa's Dungeon",

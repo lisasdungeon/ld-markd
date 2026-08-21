@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.0 — 2026-08-20
+
+- Condition panels now open for party members as well as NPCs and monsters,
+  so hovering or targeting an ally shows the same condition list players
+  already get on opponents.
+- Every panel has a Close button. Clicking it dismisses the popup immediately
+  (and untargets a pinned panel) so players who get stuck with hover/target
+  gestures can clear it without hunting for the right mouse motion.
+
 ## 1.3.7 — 2026-08-10
 
 - GM Hub cards open expanded by default so condition lists, edit/remove

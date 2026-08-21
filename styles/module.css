@@ -70,9 +70,40 @@
 }
 
 .ld-markd-panel .ldm-token-name {
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 700;
   font-size: 14px;
   letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ld-markd-panel .ldm-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid rgba(166, 138, 74, 0.6);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #e8e2d0;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.ld-markd-panel .ldm-close:hover,
+.ld-markd-panel .ldm-close:focus-visible {
+  background: rgba(160, 48, 36, 0.7);
+  border-color: #c96a4a;
+  color: #fff;
+  outline: none;
 }
 
 .ld-markd-panel .ldm-effects {

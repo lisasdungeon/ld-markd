@@ -15,12 +15,17 @@ import { listDisplayConditions, enrichDescriptionHTML } from "./condition-data.j
 const entries = new Map();
 /** @type {Map<string, ReturnType<typeof setTimeout>>} */
 const hideTimers = new Map();
+/** Token ids whose panel was closed; blocks immediate hover re-open. */
+const dismissed = new Set();
+/** @type {Map<string, ReturnType<typeof setTimeout>>} */
+const dismissTimers = new Map();
 let tickerAttached = false;
 /** @type {{ entry: PanelEntry, offsetX: number, offsetY: number }|null} */
 let dragState = null;
 
 const DOCK_ID = "ld-markd-dock";
 const HOVER_GRACE_MS = 250;
+const DISMISS_HOLD_MS = 300;
 
 export function initConditionWatch() {
   Hooks.on("hoverToken", onHoverToken);
@@ -33,14 +38,18 @@ export function initConditionWatch() {
   Hooks.on("deleteItem", (item) => refreshActor(actorFromItem(item)));
   Hooks.on("updateActor", (actor) => refreshActor(actor));
   Hooks.on("updateCombat", () => refreshAllContent());
-  Hooks.on("deleteToken", (tokenDoc) => removeEntry(tokenDoc.id));
+  Hooks.on("deleteToken", (tokenDoc) => {
+    dismissed.delete(tokenDoc.id);
+    clearDismissTimer(tokenDoc.id);
+    removeEntry(tokenDoc.id);
+  });
   Hooks.on("ldMarkd.enabledChanged", (enabled) => {
     if (!enabled) clearAll();
   });
 }
 
-function isNpcToken(token) {
-  return Boolean(token?.actor) && token.actor.hasPlayerOwner === false;
+function isWatchableToken(token) {
+  return Boolean(token?.actor);
 }
 
 function actorFromEffectParent(effect) {
@@ -59,13 +68,16 @@ function actorFromItem(item) {
 }
 
 function onHoverToken(token, hovered) {
-  if (!isNpcToken(token)) return;
+  if (!isWatchableToken(token)) return;
   if (hovered) {
     if (!isModuleEnabled()) return;
+    if (dismissed.has(token.id)) return;
     clearHideTimer(token.id);
     setEntryState(token, { hovered: true });
     return;
   }
+  dismissed.delete(token.id);
+  clearDismissTimer(token.id);
   // Grace period so the pointer can move from the token onto the panel
   // (e.g. to use the description scrollbar) without the panel vanishing.
   clearHideTimer(token.id);
@@ -80,8 +92,12 @@ function onHoverToken(token, hovered) {
 
 function onTargetToken(user, token, targeted) {
   if (user.id !== game.userId) return;
-  if (!isNpcToken(token)) return;
+  if (!isWatchableToken(token)) return;
   if (targeted && !isModuleEnabled()) return;
+  if (targeted) {
+    dismissed.delete(token.id);
+    clearDismissTimer(token.id);
+  }
   if (!targeted) {
     const entry = entries.get(token.id);
     if (entry) entry.userPos = null;
@@ -94,6 +110,37 @@ function clearHideTimer(tokenId) {
   if (timer !== undefined) {
     clearTimeout(timer);
     hideTimers.delete(tokenId);
+  }
+}
+
+function clearDismissTimer(tokenId) {
+  const timer = dismissTimers.get(tokenId);
+  if (timer !== undefined) {
+    clearTimeout(timer);
+    dismissTimers.delete(tokenId);
+  }
+}
+
+function holdDismissed(tokenId) {
+  dismissed.add(tokenId);
+  clearDismissTimer(tokenId);
+  dismissTimers.set(
+    tokenId,
+    setTimeout(() => {
+      dismissTimers.delete(tokenId);
+      dismissed.delete(tokenId);
+    }, DISMISS_HOLD_MS)
+  );
+}
+
+function dismissPanel(token) {
+  const entry = entries.get(token.id);
+  if (!entry) return;
+  if (entry.hovered || entry.panelHover) holdDismissed(token.id);
+  const wasPinned = entry.pinned;
+  removeEntry(token.id);
+  if (wasPinned && typeof token.setTarget === "function") {
+    token.setTarget(false, { releaseOthers: false });
   }
 }
 
@@ -168,6 +215,8 @@ function removeEntry(tokenId) {
 
 function clearAll() {
   for (const id of [...hideTimers.keys()]) clearHideTimer(id);
+  for (const id of [...dismissTimers.keys()]) clearDismissTimer(id);
+  dismissed.clear();
   for (const entry of entries.values()) entry.el?.remove();
   entries.clear();
   endDrag();
@@ -190,7 +239,15 @@ function createPanelElement(entry) {
   el.addEventListener("pointerenter", () => onPanelEnter(entry));
   el.addEventListener("pointerleave", () => onPanelLeave(entry));
   el.addEventListener("pointerdown", (ev) => onPanelPointerDown(ev, entry));
+  el.addEventListener("click", (ev) => onPanelClick(ev, entry));
   return el;
+}
+
+function onPanelClick(ev, entry) {
+  if (!ev.target.closest(".ldm-close")) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  dismissPanel(entry.token);
 }
 
 function onPanelEnter(entry) {
@@ -210,6 +267,11 @@ function onPanelLeave(entry) {
 }
 
 function onPanelPointerDown(ev, entry) {
+  if (ev.target.closest(".ldm-close")) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    return;
+  }
   const live = entries.get(entry.token.id);
   if (!live?.pinned || !live.el) return;
   if (!ev.target.closest(".ldm-header")) return;
@@ -270,10 +332,14 @@ async function renderContent(entry) {
   if (!live || live.el !== el) return;
 
   const rows = enriched.map(conditionRowHTML).join("");
+  const closeLabel = escapeHTML(game.i18n.localize("LDMARKD.Panel.Close"));
   el.innerHTML = `
     <div class="ldm-header" title="${escapeHTML(game.i18n.localize("LDMARKD.Panel.DragHint"))}">
       <img class="ldm-token-img" src="${escapeHTML(token.document.texture?.src ?? token.actor?.img ?? "")}" alt="" />
       <span class="ldm-token-name">${escapeHTML(token.document.name)}</span>
+      <button type="button" class="ldm-close" title="${closeLabel}" aria-label="${closeLabel}">
+        <i class="fas fa-times" aria-hidden="true"></i>
+      </button>
     </div>
     <div class="ldm-effects">
       ${rows || `<div class="ldm-empty">${game.i18n.localize("LDMARKD.Panel.NoConditions")}</div>`}
@@ -349,6 +415,8 @@ function ensureTicker() {
 /** Resets module-level state between test runs. Not used at runtime. */
 export function _resetForTests() {
   for (const id of [...hideTimers.keys()]) clearHideTimer(id);
+  for (const id of [...dismissTimers.keys()]) clearDismissTimer(id);
+  dismissed.clear();
   endDrag();
   entries.clear();
   tickerAttached = false;

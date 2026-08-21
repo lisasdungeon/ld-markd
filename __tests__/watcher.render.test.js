@@ -38,6 +38,17 @@ describe("watcher.js — panel content, positioning, and the ticker", () => {
       expect(document.querySelector(".ldm-token-name").textContent).toBe("");
     });
 
+    it("renders a labelled close button on every panel", async () => {
+      const actor = makeActor();
+      handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
+      const button = document.querySelector(".ldm-close");
+      expect(button).not.toBeNull();
+      expect(button.getAttribute("type")).toBe("button");
+      expect(button.getAttribute("aria-label")).toBe("LDMARKD.Panel.Close");
+      expect(button.getAttribute("title")).toBe("LDMARKD.Panel.Close");
+    });
+
     it("filters out disabled and suppressed effects", async () => {
       const actor = makeActor({
         effects: {

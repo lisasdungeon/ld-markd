@@ -35,11 +35,14 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
 
-    it("ignores player-owned tokens (PCs are not NPC/monster targets)", async () => {
+    it("shows a panel on player-owned party tokens", async () => {
       const actor = makeActor({ hasPlayerOwner: true });
-      handlers.hoverToken(makeToken({ actor }), true);
+      handlers.hoverToken(makeToken({ actor, name: "Valdyr" }), true);
       await flushPanelRender();
-      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+      const panel = document.querySelector(".ld-markd-panel");
+      expect(panel).not.toBeNull();
+      expect(panel.querySelector(".ldm-token-name").textContent).toBe("Valdyr");
+      expect(panel.querySelector(".ldm-close")).not.toBeNull();
     });
 
     it("does not show a panel on hover-in while the module is disabled", async () => {
@@ -114,11 +117,14 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
 
-    it("ignores targeting a player-owned token", async () => {
+    it("pins a panel when targeting a player-owned party token", async () => {
       const actor = makeActor({ hasPlayerOwner: true });
-      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      handlers.targetToken({ id: "user1" }, makeToken({ actor, name: "Valdyr" }), true);
       await flushPanelRender();
-      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+      const panel = document.querySelector(".ld-markd-panel");
+      expect(panel).not.toBeNull();
+      expect(panel.classList.contains("ldm-pinned")).toBe(true);
+      expect(panel.querySelector(".ldm-close")).not.toBeNull();
     });
 
     it("pins a panel when targeted", async () => {
@@ -444,6 +450,157 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       await flushPanelRender();
       handlers["ldMarkd.enabledChanged"](true);
       expect(document.querySelectorAll(".ld-markd-panel")).toHaveLength(1);
+    });
+  });
+
+  describe("close button", () => {
+    function clickClose(panel) {
+      panel.querySelector(".ldm-close").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+
+    it("closes a hover panel and blocks hover re-open until the hold expires", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      clickClose(panel);
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+
+      flushHoverGrace();
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("clears the dismiss hold on hover-out so the next hover can open immediately", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      handlers.hoverToken(token, false);
+      flushHoverGrace();
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("closes a panel that is being scrolled (pointer over the panel after token hover-out)", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.dispatchEvent(new Event("pointerenter"));
+      handlers.hoverToken(token, false);
+      flushHoverGrace();
+      clickClose(panel);
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
+    it("untargets a pinned panel when closed", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      token.setTarget = jest.fn();
+      handlers.targetToken({ id: "user1" }, token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+      expect(token.setTarget).toHaveBeenCalledWith(false, { releaseOthers: false });
+    });
+
+    it("closes a pinned panel that has no setTarget method", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.targetToken({ id: "user1" }, token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
+
+    it("re-opens on a later target after the close hold", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      handlers.targetToken({ id: "user1" }, token, true);
+      await flushPanelRender();
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("does not start a drag from the close button", async () => {
+      const actor = makeActor();
+      handlers.targetToken({ id: "user1" }, makeToken({ actor }), true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.querySelector(".ldm-close").dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, clientX: 10, clientY: 10, bubbles: true })
+      );
+      expect(panel.classList.contains("ldm-dragging")).toBe(false);
+    });
+
+    it("ignores clicks that are not on the close button", async () => {
+      const actor = makeActor();
+      handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      panel.querySelector(".ldm-effects").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(document.querySelector(".ld-markd-panel")).not.toBeNull();
+    });
+
+    it("ignores a close click after the entry has been removed", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      handlers.deleteToken({ id: token.id });
+      expect(() => clickClose(panel)).not.toThrow();
+    });
+
+    it("clears a pending dismiss hold when the token is deleted", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      handlers.deleteToken({ id: token.id });
+      expect(() => flushHoverGrace()).not.toThrow();
+    });
+
+    it("clears pending dismiss timers on test reset without re-firing", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      _resetForTests();
+      expect(() => flushHoverGrace()).not.toThrow();
+    });
+
+    it("clears pending dismiss holds when the module is disabled", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      clickClose(document.querySelector(".ld-markd-panel"));
+      handlers["ldMarkd.enabledChanged"](false);
+      expect(() => flushHoverGrace()).not.toThrow();
+    });
+
+    it("closes when the inner icon is clicked", async () => {
+      const actor = makeActor();
+      handlers.hoverToken(makeToken({ actor }), true);
+      await flushPanelRender();
+      const icon = document.querySelector(".ldm-close i");
+      icon.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
   });
 

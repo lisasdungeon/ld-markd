@@ -1,20 +1,24 @@
 # LD Markd
 
 A Lisa's Dungeon module for Foundry VTT (v13/v14, system-agnostic) that lets
-**players** see the conditions/effects currently active on NPC and monster
-tokens, and gives the **GM** a dedicated Hub for viewing and editing every
-NPC's conditions on the current scene.
+**players** see the conditions/effects currently active on tokens — NPCs,
+monsters, and other party members — and gives the **GM** a dedicated Hub for
+viewing and editing every NPC's conditions on the current scene.
 
 ## Features
 
 - **Hover a token** → a panel floats next to it listing every active
   condition/effect on it (icon, name, description, remaining duration, and
-  who/what applied it, when that can be resolved).
+  who/what applied it, when that can be resolved). Works on NPCs, monsters,
+  and party members.
+- **Close button** on every panel. Click it to dismiss a popup that would
+  otherwise stay open from hover or target gestures.
 - **Target a token** → instead of floating on the token (where it can get
   in the way), the panel docks in the top-right corner of the screen and
   stays there — even after you move your mouse away — updating live (e.g.
   when a round passes and a duration ticks down). Targeting multiple
-  tokens stacks their panels in that same corner.
+  tokens stacks their panels in that same corner. Closing a targeted panel
+  also clears that target.
 - Visible to any player who can currently see the token (normal vision/fog
   rules still apply — hidden tokens are unaffected).
 - **GM Hub**: a window listing every NPC/monster token on the *current
@@ -57,9 +61,9 @@ Node tooling below if you're changing the source.
 - **GM**: to hide the toolbar controls without disabling the underlying
   feature, go to **Game Settings → Configure Settings → Module
   Settings → LD Markd** and turn off "Show Scene Control Button".
-- **Players**: hover over any visible NPC/monster token to see its
+- **Players**: hover over any visible token (allies included) to see its
   conditions; right-click-target a token to keep the panel pinned while you
-  act.
+  act. Click the panel's Close button if it stays on screen.
 
 ## How duration is calculated
 
@@ -85,9 +89,10 @@ to core Foundry APIs (`Actor#toggleStatusEffect` against
 editor, so both are automatically correct for whatever system is active —
 no LD Markd-specific condition data to maintain.
 
-"NPC/monster" is determined generically as well: any token on the scene
-whose actor has no player owner (`actor.hasPlayerOwner === false`). This
-is a system-agnostic proxy for "not a PC," not a literal actor-type check.
+Player-facing panels open for any token that has an actor, including party
+members. The GM Hub still lists only tokens whose actor has no player owner
+(`actor.hasPlayerOwner === false`) — a system-agnostic proxy for "not a PC,"
+not a literal actor-type check.
 
 ## Development
 
