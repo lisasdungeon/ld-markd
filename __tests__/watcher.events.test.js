@@ -93,6 +93,18 @@ describe("watcher.js — hooks and panel lifecycle", () => {
       panel.dispatchEvent(new Event("pointerleave"));
       expect(document.querySelector(".ld-markd-panel")).toBeNull();
     });
+
+    it("closes the panel once the pointer leaves it, when hover-out already started the grace timer", async () => {
+      const actor = makeActor();
+      const token = makeToken({ actor });
+      handlers.hoverToken(token, true);
+      await flushPanelRender();
+      const panel = document.querySelector(".ld-markd-panel");
+      handlers.hoverToken(token, false);
+      panel.dispatchEvent(new Event("pointerenter"));
+      panel.dispatchEvent(new Event("pointerleave"));
+      expect(document.querySelector(".ld-markd-panel")).toBeNull();
+    });
   });
 
   describe("targetToken", () => {

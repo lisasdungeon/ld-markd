@@ -253,7 +253,14 @@ function onPanelClick(ev, entry) {
 function onPanelEnter(entry) {
   const live = entries.get(entry.token.id);
   if (!live) return;
+  // A pending hide timer means hoverToken(false) already fired for the
+  // token, i.e. the pointer truly left it on the way to the panel. Clear
+  // the stale "hovered" flag now so leaving the panel later isn't blocked
+  // by a hover state that will never naturally clear. If there is no
+  // pending timer, the token hook still reports hovered — leave it alone.
+  const hadPendingHide = hideTimers.has(live.token.id);
   clearHideTimer(live.token.id);
+  if (hadPendingHide) live.hovered = false;
   live.panelHover = true;
 }
 

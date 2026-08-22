@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.1 — 2026-08-21
+
+- Fixed hover panels not closing when the pointer left the panel itself.
+  Moving the pointer from a token onto its panel left a stale "still
+  hovering the token" flag in place, so the panel would only disappear
+  once another token was hovered or the panel's Close button was clicked
+  — cluttering the screen with lingering panels when zooming/panning past
+  several tokens. Leaving the panel now closes it correctly.
+
 ## 1.4.0 — 2026-08-20
 
 - Condition panels now open for party members as well as NPCs and monsters,
